@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useReport, useDeleteReport } from '../hooks/useReports';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
 import { StatusBadge } from '../components/molecules/StatusBadge';
 import { LoadingSpinner } from '../components/molecules/LoadingSpinner';
+import { ReportActions } from '../components/molecules/ReportActions';
 import { Button } from '../components/atoms/Button';
 import { 
   ArrowLeft, 
@@ -25,6 +26,7 @@ export const ReportViewPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: reportResponse, isLoading, error } = useReport(id!);
   const deleteReportMutation = useDeleteReport();
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const handleDownloadPDF = async () => {
     if (reportResponse?.data) {
@@ -45,6 +47,16 @@ export const ReportViewPage: React.FC = () => {
         console.error('Error deleting report:', error);
       }
     }
+  };
+
+  const handleSuccess = (message: string) => {
+    setNotification({ type: 'success', message });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleError = (error: string) => {
+    setNotification({ type: 'error', message: error });
+    setTimeout(() => setNotification(null), 5000);
   };
 
   if (isLoading) {
@@ -78,11 +90,22 @@ export const ReportViewPage: React.FC = () => {
   }
 
   const report = reportResponse.data;
-  const totalPartseCost = report.suggestedParts.reduce((sum, part) => sum + (part.quantity * part.unitPrice), 0);
+  const totalPartsCost = report.suggested_parts?.reduce((sum: number, part: any) => sum + (part.quantity * (part.unit_price || 0)), 0) || 0;
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-8">
+        {/* Notification */}
+        {notification && (
+          <div className={`p-4 rounded-lg ${
+            notification.type === 'success' 
+              ? 'bg-green-50 border border-green-200 text-green-800' 
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {notification.message}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -93,17 +116,13 @@ export const ReportViewPage: React.FC = () => {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">{report.clientName}</h1>
-              <p className="text-slate-600">{report.machineType} - {report.model}</p>
+              <h1 className="text-3xl font-bold text-slate-900">{report.client_name}</h1>
+              <p className="text-slate-600">{report.machine_type} - {report.model}</p>
             </div>
           </div>
           
           <div className="flex items-center space-x-3">
             <StatusBadge status={report.status} />
-            <Button variant="outline" onClick={handleDownloadPDF}>
-              <Download className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
             <Link to={`/reports/${report.id}/edit`}>
               <Button variant="outline">
                 <Edit className="w-4 h-4 mr-2" />
@@ -121,6 +140,17 @@ export const ReportViewPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Report Actions */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <h2 className="text-xl font-semibold text-slate-900 mb-4">Acciones del Reporte</h2>
+          <ReportActions
+            reportId={report.id}
+            reportName={`${report.client_name}_${report.machine_type}`}
+            onSuccess={handleSuccess}
+            onError={handleError}
+          />
+        </div>
+
         {/* Report Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -132,14 +162,13 @@ export const ReportViewPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="text-sm font-medium text-slate-600 mb-2">Client Information</h3>
-                  <p className="text-slate-900 font-medium">{report.clientName}</p>
-                  <p className="text-slate-600 text-sm">{report.clientContact}</p>
+                  <p className="text-slate-900 font-medium">{report.client_name}</p>
                 </div>
                 
                 <div>
                   <h3 className="text-sm font-medium text-slate-600 mb-2">Machine Details</h3>
-                  <p className="text-slate-900 font-medium">{report.machineType} - {report.model}</p>
-                  <p className="text-slate-600 text-sm">S/N: {report.serialNumber}</p>
+                  <p className="text-slate-900 font-medium">{report.machine_type} - {report.model}</p>
+                  <p className="text-slate-600 text-sm">S/N: {report.serial_number}</p>
                   <p className="text-slate-600 text-sm">Hours: {report.hourmeter.toLocaleString()}</p>
                 </div>
 
@@ -147,23 +176,15 @@ export const ReportViewPage: React.FC = () => {
                   <Calendar className="w-4 h-4 text-slate-400 mr-2" />
                   <div>
                     <p className="text-sm text-slate-600">Inspection Date</p>
-                    <p className="font-medium text-slate-900">{format(report.date, 'PPP')}</p>
+                    <p className="font-medium text-slate-900">{format(new Date(report.report_date), 'PPP')}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center">
-                  <MapPin className="w-4 h-4 text-slate-400 mr-2" />
+                  <Wrench className="w-4 h-4 text-slate-400 mr-2" />
                   <div>
-                    <p className="text-sm text-slate-600">Location</p>
-                    <p className="font-medium text-slate-900">{report.location}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center">
-                  <User className="w-4 h-4 text-slate-400 mr-2" />
-                  <div>
-                    <p className="text-sm text-slate-600">Technician</p>
-                    <p className="font-medium text-slate-900">{report.technicianName}</p>
+                    <p className="text-sm text-slate-600">OTT</p>
+                    <p className="font-medium text-slate-900">{report.ott || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -265,34 +286,34 @@ export const ReportViewPage: React.FC = () => {
                 
                 <div className="flex justify-between">
                   <span className="text-slate-600">Suggested Parts</span>
-                  <span className="font-medium text-slate-900">{report.suggestedParts.length}</span>
+                  <span className="font-medium text-slate-900">{report.suggested_parts.length}</span>
                 </div>
                 
                 <div className="flex justify-between pt-3 border-t border-slate-200">
                   <span className="text-slate-600">Parts Cost</span>
-                  <span className="font-medium text-slate-900">${totalPartseCost.toFixed(2)}</span>
+                  <span className="font-medium text-slate-900">${totalPartsCost.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Suggested Parts */}
-            {report.suggestedParts.length > 0 && (
+            {report.suggested_parts.length > 0 && (
               <div className="bg-white rounded-xl border border-slate-200 p-6">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Suggested Parts</h3>
                 
                 <div className="space-y-4">
-                  {report.suggestedParts.map((part, index) => (
+                  {report.suggested_parts.map((part, index) => (
                     <div key={part.id} className="border border-slate-100 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-medium text-slate-900 text-sm">{part.description}</h4>
                         <span className="text-sm font-medium text-slate-900">
-                          ${(part.quantity * part.unitPrice).toFixed(2)}
+                          ${(part.quantity * part.unit_price).toFixed(2)}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 mb-2">{part.partNumber}</p>
+                      <p className="text-xs text-slate-600 mb-2">{part.part_number}</p>
                       <div className="flex justify-between text-xs text-slate-500">
                         <span>Qty: {part.quantity}</span>
-                        <span>Unit: ${part.unitPrice.toFixed(2)}</span>
+                        <span>Unit: ${part.unit_price.toFixed(2)}</span>
                       </div>
                     </div>
                   ))}

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
 import { Report, CreateReportRequest, ApiResponse } from '../types';
+import { PDFService } from '../services/pdfService';
+import { EmailService } from '../services/emailService';
 
 export const createReport = async (req: Request, res: Response) => {
   const client = await pool.connect();
@@ -343,5 +345,206 @@ export const deleteReport = async (req: Request, res: Response): Promise<void> =
     });
   } finally {
     client.release();
+  }
+};
+
+export const downloadPDF = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const reportId = req.params.id;
+    
+    // Get report with all related data
+    const reportResult = await pool.query(
+      'SELECT * FROM reports WHERE id = $1 AND user_id = $2',
+      [reportId, userId]
+    );
+    
+    if (reportResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Report not found'
+      });
+      return;
+    }
+    
+    const report = reportResult.rows[0];
+    
+    // Get components
+    const componentsResult = await pool.query(
+      'SELECT * FROM components WHERE report_id = $1',
+      [reportId]
+    );
+    
+    // Get photos for each component
+    const components = await Promise.all(
+      componentsResult.rows.map(async (component) => {
+        const photosResult = await pool.query(
+          'SELECT * FROM photos WHERE component_id = $1',
+          [component.id]
+        );
+        return {
+          ...component,
+          photos: photosResult.rows
+        };
+      })
+    );
+    
+    // Get suggested parts
+    const suggestedPartsResult = await pool.query(
+      'SELECT * FROM suggested_parts WHERE report_id = $1',
+      [reportId]
+    );
+    
+    // Flatten photos array
+    const allPhotos = components.flatMap(component => component.photos);
+    
+    // Generate PDF
+    const pdfBuffer = await PDFService.generatePDF(
+      report,
+      components,
+      allPhotos,
+      suggestedPartsResult.rows
+    );
+    
+    // Set response headers
+    const filename = `Reporte_${report.client_name}_${report.machine_type}_${new Date(report.report_date).toISOString().split('T')[0]}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Download PDF error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate PDF'
+    });
+  }
+};
+
+export const sendReportEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const reportId = req.params.id;
+    const { emails, subject, message } = req.body;
+    
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Email addresses are required'
+      });
+      return;
+    }
+    
+    // Get report with all related data
+    const reportResult = await pool.query(
+      'SELECT * FROM reports WHERE id = $1 AND user_id = $2',
+      [reportId, userId]
+    );
+    
+    if (reportResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'Report not found'
+      });
+      return;
+    }
+    
+    const report = reportResult.rows[0];
+    
+    // Get components
+    const componentsResult = await pool.query(
+      'SELECT * FROM components WHERE report_id = $1',
+      [reportId]
+    );
+    
+    // Get photos for each component
+    const components = await Promise.all(
+      componentsResult.rows.map(async (component) => {
+        const photosResult = await pool.query(
+          'SELECT * FROM photos WHERE component_id = $1',
+          [component.id]
+        );
+        return {
+          ...component,
+          photos: photosResult.rows
+        };
+      })
+    );
+    
+    // Get suggested parts
+    const suggestedPartsResult = await pool.query(
+      'SELECT * FROM suggested_parts WHERE report_id = $1',
+      [reportId]
+    );
+    
+    // Flatten photos array
+    const allPhotos = components.flatMap(component => component.photos);
+    
+    // Generate PDF
+    const pdfBuffer = await PDFService.generatePDF(
+      report,
+      components,
+      allPhotos,
+      suggestedPartsResult.rows
+    );
+    
+    // Send emails
+    const emailResults = await EmailService.sendMultipleEmails(
+      emails,
+      report,
+      pdfBuffer,
+      subject,
+      message
+    );
+    
+    const response: ApiResponse<{
+      success: string[];
+      failed: string[];
+      totalSent: number;
+      totalFailed: number;
+    }> = {
+      success: true,
+      data: {
+        success: emailResults.success,
+        failed: emailResults.failed,
+        totalSent: emailResults.success.length,
+        totalFailed: emailResults.failed.length
+      },
+      message: `Email sent to ${emailResults.success.length} recipients${emailResults.failed.length > 0 ? `, ${emailResults.failed.length} failed` : ''}`
+    };
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Send email error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send email'
+    });
+  }
+};
+
+export const testEmailService = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const isConnected = await EmailService.testConnection();
+    
+    if (isConnected) {
+      res.json({
+        success: true,
+        message: 'Email service is working correctly'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Email service connection failed'
+      });
+    }
+  } catch (error) {
+    console.error('Test email service error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test email service'
+    });
   }
 }; 

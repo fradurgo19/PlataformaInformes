@@ -17,7 +17,7 @@ import {
   ArrowLeft,
   AlertCircle 
 } from 'lucide-react';
-import { MachineType, ComponentType, Component, Part, Report } from '../types';
+import { MachineType, ComponentType, Component, Report } from '../types';
 
 export const NewReportPage: React.FC = () => {
   const navigate = useNavigate();
@@ -39,7 +39,15 @@ export const NewReportPage: React.FC = () => {
     overallSuggestions: '',
   });
 
-  const [components, setComponents] = useState<Omit<Component, 'id'>[]>([]);
+  const [components, setComponents] = useState<Array<{
+    type: ComponentType;
+    findings: string;
+    parameters?: string;
+    status: 'CORRECTED' | 'PENDING';
+    suggestions?: string;
+    photos: any[];
+    priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  }>>([]);
   const [suggestedParts, setSuggestedParts] = useState<Array<{
     partNumber: string;
     description: string;
@@ -196,7 +204,7 @@ export const NewReportPage: React.FC = () => {
     }]);
   };
 
-  const updateComponent = (index: number, field: keyof Omit<Component, 'id'>, value: any) => {
+  const updateComponent = (index: number, field: string, value: any) => {
     setComponents(prev => prev.map((comp, i) => 
       i === index ? { ...comp, [field]: value } : comp
     ));
@@ -233,35 +241,60 @@ export const NewReportPage: React.FC = () => {
     }
 
     try {
-      const reportToCreate: Omit<Report, 'id' | 'createdAt' | 'updatedAt'> = {
-        clientName: reportData.clientName,
-        clientContact: reportData.clientContact || '',
-        machineType: reportData.machineType,
+      console.log('🚀 Starting report creation...');
+      console.log('📝 User:', authState.user);
+      
+      const reportToCreate = {
+        client_name: reportData.clientName,
+        machine_type: reportData.machineType,
         model: reportData.model,
-        serialNumber: reportData.serialNumber,
+        serial_number: reportData.serialNumber,
         hourmeter: parseInt(reportData.hourmeter),
-        date: new Date(reportData.date),
-        location: reportData.location || '',
-        technicianId: authState.user.id,
-        technicianName: `${authState.user.firstName} ${authState.user.lastName}`,
-        components: components.map((comp, index) => ({
-          ...comp,
-          id: `comp-${index}`,
-        })),
+        report_date: reportData.date,
+        ott: reportData.ott,
         conclusions: reportData.conclusions,
-        suggestedParts: suggestedParts.map((part, index) => ({
-          ...part,
-          id: `part-${index}`,
-          unitPrice: 0,
-          isRequired: true,
+        overall_suggestions: reportData.overallSuggestions,
+        components: components.map((comp) => ({
+          type: comp.type,
+          findings: comp.findings,
+          parameters: comp.parameters || '',
+          status: comp.status,
+          suggestions: comp.suggestions || '',
+          priority: comp.priority,
+          photos: comp.photos || []
         })),
-        status: 'DRAFT',
+        suggested_parts: suggestedParts.map((part) => ({
+          part_number: part.partNumber,
+          description: part.description,
+          quantity: part.quantity
+        }))
       };
 
+      console.log('📊 Report data to send:', reportToCreate);
+      console.log('🔗 API URL:', 'http://localhost:3001/api/reports');
+      
       const response = await createReportMutation.mutateAsync(reportToCreate);
-      navigate(`/reports/${response.data.id}`);
-    } catch (error) {
-      setErrors({ submit: 'Failed to create report. Please try again.' });
+      console.log('✅ Report created successfully:', response);
+      
+      if (response.data?.id) {
+        navigate(`/reports/${response.data.id}`);
+      } else {
+        throw new Error('No report ID returned');
+      }
+    } catch (error: any) {
+      console.error('❌ Create report error details:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      
+      if (error.message?.includes('Failed to fetch')) {
+        setErrors({ submit: 'Cannot connect to server. Please check if backend is running.' });
+      } else if (error.message?.includes('401')) {
+        setErrors({ submit: 'Authentication failed. Please login again.' });
+      } else if (error.message?.includes('403')) {
+        setErrors({ submit: 'Access denied. Please check your permissions.' });
+      } else {
+        setErrors({ submit: `Failed to create report: ${error.message || 'Unknown error'}` });
+      }
     }
   };
 

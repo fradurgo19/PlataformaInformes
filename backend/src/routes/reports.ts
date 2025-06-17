@@ -4,7 +4,10 @@ import {
   getReports, 
   getReportById, 
   updateReport, 
-  deleteReport 
+  deleteReport,
+  downloadPDF,
+  sendReportEmail,
+  testEmailService
 } from '../controllers/reportController';
 import { authenticateToken } from '../middleware/auth';
 import { upload, handleUploadError } from '../middleware/upload';
@@ -20,6 +23,11 @@ router.get('/', getReports as any);
 router.get('/:id', getReportById as any);
 router.put('/:id', updateReport as any);
 router.delete('/:id', deleteReport as any);
+
+// PDF and Email routes
+router.get('/:id/pdf', downloadPDF as any);
+router.post('/:id/email', sendReportEmail as any);
+router.get('/test/email', testEmailService as any);
 
 // File upload route
 router.post('/upload', upload.array('photos', 10), handleUploadError, (req: any, res: any) => {

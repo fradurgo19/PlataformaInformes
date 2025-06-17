@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import reportRoutes from './routes/reports';
 
-// Load environment variables
+// Load environment variables from backend directory
 dotenv.config();
 
 const app = express();
@@ -26,6 +26,12 @@ app.use(cors({
 
 // Logging middleware
 app.use(morgan('combined'));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📡 ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  next();
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

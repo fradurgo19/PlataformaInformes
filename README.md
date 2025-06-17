@@ -11,6 +11,9 @@ Sistema completo para la gestión de reportes técnicos de maquinaria industrial
 - **💾 Base de datos PostgreSQL** para almacenamiento robusto
 - **🎨 Interfaz moderna** con Tailwind CSS
 - **📱 Diseño responsive** para todos los dispositivos
+- **📄 Generación de PDF** profesional con imágenes incluidas
+- **📧 Envío de reportes por email** con PDF adjunto
+- **🔄 Múltiples destinatarios** en un solo envío
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -28,6 +31,8 @@ Sistema completo para la gestión de reportes técnicos de maquinaria industrial
 - **JWT** para autenticación
 - **Multer** para manejo de archivos
 - **bcryptjs** para encriptación
+- **Puppeteer** para generación de PDF
+- **Nodemailer** para envío de emails
 
 ## 📋 Requisitos Previos
 
@@ -91,7 +96,15 @@ UPLOAD_PATH=./uploads
 
 # CORS Configuration
 CORS_ORIGIN=http://localhost:5174
+
+# Email Configuration (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
 ```
+
+**Nota:** Para Gmail, necesitas usar una "Contraseña de aplicación" en lugar de tu contraseña normal.
 
 ### 5. Configurar Frontend
 
@@ -143,6 +156,7 @@ PlataformaInformes/
 │   │   ├── controllers/    # Controladores de API
 │   │   ├── middleware/     # Middleware de autenticación
 │   │   ├── routes/         # Rutas de API
+│   │   ├── services/       # Servicios (PDF, Email)
 │   │   └── types/          # Tipos TypeScript
 │   ├── uploads/            # Archivos subidos
 │   └── package.json
@@ -179,6 +193,49 @@ PlataformaInformes/
 - `GET /api/reports/:id` - Obtener reporte específico
 - `PUT /api/reports/:id` - Actualizar reporte
 - `DELETE /api/reports/:id` - Eliminar reporte
+
+### PDF y Email
+- `GET /api/reports/:id/pdf` - Descargar reporte en PDF
+- `POST /api/reports/:id/email` - Enviar reporte por email
+- `GET /api/reports/test/email` - Probar conexión de email
+
+## 📄 Funcionalidades de PDF
+
+### Características del PDF generado:
+- **Diseño profesional** con logo y branding
+- **Información completa** del reporte
+- **Imágenes de componentes** incluidas
+- **Tabla de partes sugeridas** con precios
+- **Conclusiones y recomendaciones**
+- **Formato A4** optimizado para impresión
+- **Nombres de archivo automáticos** con fecha
+
+### Uso:
+1. Ve a la vista de un reporte
+2. Haz clic en "📄 Descargar PDF"
+3. El archivo se descargará automáticamente
+
+## 📧 Funcionalidades de Email
+
+### Características del envío de email:
+- **Múltiples destinatarios** en un solo envío
+- **PDF adjunto** automáticamente
+- **Asunto personalizable**
+- **Mensaje personalizado** opcional
+- **Plantilla profesional** por defecto
+- **Confirmación de envío** con estadísticas
+
+### Configuración de Email:
+1. **Gmail**: Usa una "Contraseña de aplicación"
+2. **Outlook**: Usa tu contraseña normal
+3. **Otros proveedores**: Consulta la documentación de SMTP
+
+### Uso:
+1. Ve a la vista de un reporte
+2. Haz clic en "📧 Enviar por Email"
+3. Ingresa los emails (separados por comas)
+4. Personaliza asunto y mensaje (opcional)
+5. Haz clic en "Enviar Email"
 
 ## 🤝 Contribuir
 

@@ -18,9 +18,21 @@ class ApiService {
   }
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const data = await response.json();
+    console.log('🔄 Processing response...');
+    console.log('📊 Response status:', response.status);
+    console.log('📊 Response ok:', response.ok);
+    
+    let data;
+    try {
+      data = await response.json();
+      console.log('📊 Response data:', data);
+    } catch (error) {
+      console.error('❌ Error parsing response JSON:', error);
+      throw new Error(`Failed to parse response: ${error}`);
+    }
     
     if (!response.ok) {
+      console.error('❌ API Error:', data);
       throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
     
@@ -29,22 +41,36 @@ class ApiService {
 
   // Authentication methods
   async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(credentials),
-    });
-
-    const result = await this.handleResponse<LoginResponse>(response);
+    console.log('🔗 Making login request...');
+    console.log('📊 Login credentials:', credentials);
+    console.log('🔗 API URL:', `${API_BASE_URL}/auth/login`);
     
-    if (result.success && result.data) {
-      this.token = result.data.token;
-      // Store token in localStorage
-      localStorage.setItem('authToken', result.data.token);
-      localStorage.setItem('user', JSON.stringify(result.data.user));
-    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(credentials),
+      });
 
-    return result;
+      console.log('📡 Login response status:', response.status);
+      console.log('📡 Login response ok:', response.ok);
+      console.log('📡 Login response headers:', Object.fromEntries(response.headers.entries()));
+
+      const result = await this.handleResponse<LoginResponse>(response);
+      
+      if (result.success && result.data) {
+        this.token = result.data.token;
+        // Store token in localStorage
+        localStorage.setItem('authToken', result.data.token);
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+        console.log('✅ Login successful, token stored');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      throw error;
+    }
   }
 
   async register(userData: { username: string; email: string; password: string; full_name: string }): Promise<ApiResponse<User>> {
@@ -114,11 +140,18 @@ class ApiService {
   }
 
   async createReport(reportData: CreateReportRequest): Promise<ApiResponse<Report>> {
+    console.log('🔗 Making API request to create report');
+    console.log('🔑 Token:', this.token ? 'Present' : 'Missing');
+    console.log('📊 Request data:', reportData);
+    
     const response = await fetch(`${API_BASE_URL}/reports`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(reportData),
     });
+
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
     return this.handleResponse<Report>(response);
   }
@@ -180,6 +213,10 @@ class ApiService {
 
   getToken(): string | null {
     return this.token;
+  }
+
+  getBaseUrl(): string {
+    return API_BASE_URL;
   }
 
   clearToken() {
