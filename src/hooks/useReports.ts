@@ -21,7 +21,7 @@ export const useCreateReport = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (report: CreateReportRequest) =>
+    mutationFn: (report: FormData) =>
       apiService.createReport(report),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });

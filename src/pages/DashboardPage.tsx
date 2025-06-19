@@ -16,7 +16,8 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Filter
+  Filter,
+  Archive
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportFilters, MachineType, ReportStatus, Report } from '../types';
@@ -57,31 +58,31 @@ export const DashboardPage: React.FC = () => {
 
   const getStatusIcon = (status: ReportStatus) => {
     switch (status) {
-      case 'DRAFT':
-        return <FileText className="w-4 h-4" />;
-      case 'IN_PROGRESS':
+      case 'draft':
         return <Clock className="w-4 h-4" />;
-      case 'COMPLETED':
+      case 'completed':
         return <CheckCircle className="w-4 h-4" />;
-      case 'REVIEWED':
-        return <CheckCircle className="w-4 h-4" />;
+      case 'archived':
+        return <Archive className="w-4 h-4" />;
       default:
         return <FileText className="w-4 h-4" />;
     }
   };
 
   const getPriorityCount = (reports: Report[]) => {
-    if (!reports) return { high: 0, medium: 0, total: 0 };
+    const stats = { total: 0, high: 0, medium: 0 };
     
-    const highPriority = reports.filter(report => 
-      report.components.some(comp => comp.priority === 'HIGH' || comp.priority === 'CRITICAL')
-    ).length;
+    reports.forEach(report => {
+      stats.total++;
+      if (report.components?.some(comp => comp.priority === 'HIGH' || comp.priority === 'CRITICAL')) {
+        stats.high++;
+      }
+      if (report.components?.some(comp => comp.priority === 'MEDIUM')) {
+        stats.medium++;
+      }
+    });
     
-    const mediumPriority = reports.filter(report => 
-      report.components.some(comp => comp.priority === 'MEDIUM')
-    ).length;
-    
-    return { high: highPriority, medium: mediumPriority, total: reports.length };
+    return stats;
   };
 
   if (isLoading) {
@@ -173,7 +174,7 @@ export const DashboardPage: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-slate-600">This Month</p>
                 <p className="text-3xl font-bold text-green-600">
-                  {reports.filter(r => r.date.getMonth() === new Date().getMonth()).length}
+                  {reports.filter(r => new Date(r.report_date).getMonth() === new Date().getMonth()).length}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -239,28 +240,29 @@ export const DashboardPage: React.FC = () => {
               </thead>
               <tbody>
                 {reports.map((report) => {
-                  const highestPriority = report.components.reduce((highest, comp) => {
-                    const priorities = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
-                    return priorities[comp.priority] > priorities[highest] ? comp.priority : highest;
-                  }, 'LOW' as any);
+                  const highestPriority = report.components?.reduce((highest, comp) => {
+                    const priorities: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
+                    const currentPriority = priorities[comp.priority] || 0;
+                    const highestPriority = priorities[highest] || 0;
+                    return currentPriority > highestPriority ? comp.priority : highest;
+                  }, 'LOW') || 'LOW';
 
                   return (
                     <tr key={report.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="py-4 px-4">
                         <div>
-                          <p className="font-medium text-slate-900">{report.clientName}</p>
-                          <p className="text-sm text-slate-600">{report.serialNumber}</p>
+                          <p className="font-medium text-slate-900">{report.client_name || 'No Client'}</p>
+                          <p className="text-sm text-slate-600">{report.serial_number || 'N/A'}</p>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <div>
-                          <p className="font-medium text-slate-900">{report.machineType}</p>
-                          <p className="text-sm text-slate-600">{report.model}</p>
+                          <p className="font-medium text-slate-900">{report.machine_type || 'N/A'}</p>
+                          <p className="text-sm text-slate-600">{report.model || 'N/A'}</p>
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="text-slate-900">{format(report.date, 'MMM dd, yyyy')}</p>
-                        <p className="text-sm text-slate-600">{report.location}</p>
+                        <p className="text-slate-900">{report.report_date ? format(new Date(report.report_date), 'MMM dd, yyyy') : 'No Date'}</p>
                       </td>
                       <td className="py-4 px-4">
                         <StatusBadge status={report.status} />

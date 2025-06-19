@@ -18,7 +18,7 @@ const router = Router();
 router.use(authenticateToken as any);
 
 // Report routes
-router.post('/', createReport as any);
+router.post('/', upload.any(), handleUploadError, createReport as any);
 router.get('/', getReports as any);
 router.get('/:id', getReportById as any);
 router.put('/:id', updateReport as any);

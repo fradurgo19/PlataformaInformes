@@ -144,9 +144,9 @@ export const ReportsPage: React.FC = () => {
               <div key={report.id} className="bg-slate-50 rounded-lg border border-slate-200 p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-slate-900 mb-1">{report.clientName}</h3>
-                    <p className="text-sm text-slate-600">{report.machineType} - {report.model}</p>
-                    <p className="text-sm text-slate-500">S/N: {report.serialNumber}</p>
+                    <h3 className="font-semibold text-slate-900 mb-1">{report.client_name || 'No Client'}</h3>
+                    <p className="text-sm text-slate-600">{report.machine_type || 'N/A'} - {report.model || 'N/A'}</p>
+                    <p className="text-sm text-slate-500">S/N: {report.serial_number || 'N/A'}</p>
                   </div>
                   <StatusBadge status={report.status} size="sm" />
                 </div>
@@ -154,15 +154,11 @@ export const ReportsPage: React.FC = () => {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-sm text-slate-600">
                     <span className="font-medium">Date:</span>
-                    <span className="ml-2">{format(report.date, 'MMM dd, yyyy')}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-slate-600">
-                    <span className="font-medium">Location:</span>
-                    <span className="ml-2 truncate">{report.location}</span>
+                    <span className="ml-2">{report.report_date ? format(new Date(report.report_date), 'MMM dd, yyyy') : 'No Date'}</span>
                   </div>
                   <div className="flex items-center text-sm text-slate-600">
                     <span className="font-medium">Components:</span>
-                    <span className="ml-2">{report.components.length}</span>
+                    <span className="ml-2">{report.components?.length || 0}</span>
                   </div>
                 </div>
 

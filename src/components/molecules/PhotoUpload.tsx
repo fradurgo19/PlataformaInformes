@@ -4,8 +4,8 @@ import { Camera, X, Upload } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface PhotoUploadProps {
-  photos: string[];
-  onPhotosChange: (photos: string[]) => void;
+  photos: File[];
+  onPhotosChange: (photos: File[]) => void;
   maxPhotos?: number;
   label?: string;
 }
@@ -22,22 +22,15 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
 
-    const newPhotos: string[] = [];
+    const newFiles = Array.from(files);
     const remainingSlots = maxPhotos - photos.length;
-    const filesToProcess = Math.min(files.length, remainingSlots);
+    
+    const filesToProcess = newFiles.slice(0, remainingSlots);
 
-    for (let i = 0; i < filesToProcess; i++) {
-      const file = files[i];
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          newPhotos.push(e.target?.result as string);
-          if (newPhotos.length === filesToProcess) {
-            onPhotosChange([...photos, ...newPhotos]);
-          }
-        };
-        reader.readAsDataURL(file);
-      }
+    const imageFiles = filesToProcess.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length > 0) {
+      onPhotosChange([...photos, ...imageFiles]);
     }
   };
 
@@ -107,22 +100,26 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       {/* Photo Preview Grid */}
       {photos.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {photos.map((photo, index) => (
-            <div key={index} className="relative group">
-              <img
-                src={photo}
-                alt={`Photo ${index + 1}`}
-                className="w-full h-24 object-cover rounded-lg border border-slate-200"
-              />
-              <button
-                type="button"
-                onClick={() => removePhoto(index)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
+          {photos.map((photo, index) => {
+            const objectUrl = URL.createObjectURL(photo);
+            return (
+              <div key={index} className="relative group">
+                <img
+                  src={objectUrl}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full h-24 object-cover rounded-lg border border-slate-200"
+                  onLoad={() => URL.revokeObjectURL(objectUrl)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(index)}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -139,15 +139,19 @@ class ApiService {
     return this.handleResponse<Report>(response);
   }
 
-  async createReport(reportData: CreateReportRequest): Promise<ApiResponse<Report>> {
-    console.log('🔗 Making API request to create report');
+  async createReport(reportData: FormData): Promise<ApiResponse<Report>> {
+    console.log('🔗 Making API request to create report with FormData');
     console.log('🔑 Token:', this.token ? 'Present' : 'Missing');
-    console.log('📊 Request data:', reportData);
     
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/reports`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(reportData),
+      headers: headers,
+      body: reportData,
     });
 
     console.log('📡 Response status:', response.status);

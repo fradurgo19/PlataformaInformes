@@ -45,7 +45,7 @@ export const NewReportPage: React.FC = () => {
     parameters?: string;
     status: 'CORRECTED' | 'PENDING';
     suggestions?: string;
-    photos: any[];
+    photos: File[];
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }>>([]);
   const [suggestedParts, setSuggestedParts] = useState<Array<{
@@ -160,6 +160,49 @@ export const NewReportPage: React.FC = () => {
     { value: 'PENDING', label: 'Pending' },
   ];
 
+  const validateAllSteps = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Step 1 validation
+    if (!reportData.clientName) newErrors.clientName = 'Client name is required';
+    if (!reportData.machineType) newErrors.machineType = 'Machine type is required';
+    if (!reportData.model) newErrors.model = 'Model is required';
+    if (!reportData.serialNumber) newErrors.serialNumber = 'Serial number is required';
+    if (!reportData.hourmeter) {
+      newErrors.hourmeter = 'Hourmeter reading is required';
+    } else if (isNaN(Number(reportData.hourmeter))) {
+      newErrors.hourmeter = 'Hourmeter must be a valid number';
+    }
+    if (!reportData.ott) newErrors.ott = 'OTT is required';
+
+    // Step 2 validation
+    if (components.length === 0) {
+      newErrors.components = 'At least one component assessment is required';
+    } else {
+      components.forEach((comp, index) => {
+        if (!comp.findings) {
+          newErrors[`component_${index}_findings`] = `Findings are required for component ${index + 1}`;
+        }
+      });
+    }
+
+    // Step 3 validation
+    if (!reportData.conclusions) newErrors.conclusions = 'Conclusions are required';
+    
+    // Step 4 (suggested parts) validation
+    suggestedParts.forEach((part, index) => {
+      if (!part.partNumber) {
+        newErrors[`part_${index}_partNumber`] = `Part number is required for part ${index + 1}`;
+      }
+      if (!part.description) {
+        newErrors[`part_${index}_description`] = `Description is required for part ${index + 1}`;
+      }
+    });
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -168,7 +211,11 @@ export const NewReportPage: React.FC = () => {
       if (!reportData.machineType) newErrors.machineType = 'Machine type is required';
       if (!reportData.model) newErrors.model = 'Model is required';
       if (!reportData.serialNumber) newErrors.serialNumber = 'Serial number is required';
-      if (!reportData.hourmeter) newErrors.hourmeter = 'Hourmeter reading is required';
+      if (!reportData.hourmeter) {
+        newErrors.hourmeter = 'Hourmeter reading is required';
+      } else if (isNaN(Number(reportData.hourmeter))) {
+        newErrors.hourmeter = 'Hourmeter must be a valid number';
+      }
       if (!reportData.ott) newErrors.ott = 'OTT is required';
     } else if (step === 2) {
       if (components.length === 0) {
@@ -233,7 +280,17 @@ export const NewReportPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(3)) return;
+    if (!validateAllSteps()) {
+      // Find the first step with an error and go to it
+      if (errors.clientName || errors.machineType || errors.model || errors.serialNumber || errors.hourmeter || errors.ott) {
+        setCurrentStep(1);
+      } else if (errors.components || Object.keys(errors).some(k => k.startsWith('component_'))) {
+        setCurrentStep(2);
+      } else if (errors.conclusions || Object.keys(errors).some(k => k.startsWith('part_'))) {
+        setCurrentStep(3);
+      }
+      return;
+    }
 
     if (!authState.user) {
       setErrors({ submit: 'User not authenticated' });
@@ -242,59 +299,50 @@ export const NewReportPage: React.FC = () => {
 
     try {
       console.log('🚀 Starting report creation...');
-      console.log('📝 User:', authState.user);
       
-      const reportToCreate = {
+      const reportJson = {
         client_name: reportData.clientName,
         machine_type: reportData.machineType,
         model: reportData.model,
         serial_number: reportData.serialNumber,
-        hourmeter: parseInt(reportData.hourmeter),
+        hourmeter: Number(reportData.hourmeter),
         report_date: reportData.date,
         ott: reportData.ott,
         conclusions: reportData.conclusions,
         overall_suggestions: reportData.overallSuggestions,
-        components: components.map((comp) => ({
-          type: comp.type,
-          findings: comp.findings,
-          parameters: comp.parameters || '',
-          status: comp.status,
-          suggestions: comp.suggestions || '',
-          priority: comp.priority,
-          photos: comp.photos || []
+        components: components.map(c => ({
+          type: c.type,
+          findings: c.findings,
+          parameters: c.parameters,
+          status: c.status,
+          suggestions: c.suggestions,
+          priority: c.priority,
         })),
-        suggested_parts: suggestedParts.map((part) => ({
-          part_number: part.partNumber,
-          description: part.description,
-          quantity: part.quantity
-        }))
+        suggested_parts: suggestedParts.map(p => ({
+          part_number: p.partNumber,
+          description: p.description,
+          quantity: Number(p.quantity) || 1
+        })),
       };
 
-      console.log('📊 Report data to send:', reportToCreate);
-      console.log('🔗 API URL:', 'http://localhost:3001/api/reports');
-      
-      const response = await createReportMutation.mutateAsync(reportToCreate);
-      console.log('✅ Report created successfully:', response);
-      
-      if (response.data?.id) {
-        navigate(`/reports/${response.data.id}`);
-      } else {
-        throw new Error('No report ID returned');
-      }
-    } catch (error: any) {
-      console.error('❌ Create report error details:', error);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error stack:', error.stack);
-      
-      if (error.message?.includes('Failed to fetch')) {
-        setErrors({ submit: 'Cannot connect to server. Please check if backend is running.' });
-      } else if (error.message?.includes('401')) {
-        setErrors({ submit: 'Authentication failed. Please login again.' });
-      } else if (error.message?.includes('403')) {
-        setErrors({ submit: 'Access denied. Please check your permissions.' });
-      } else {
-        setErrors({ submit: `Failed to create report: ${error.message || 'Unknown error'}` });
-      }
+      const formData = new FormData();
+      formData.append('reportData', JSON.stringify(reportJson));
+
+      components.forEach((component, componentIndex) => {
+        component.photos.forEach(photoFile => {
+          formData.append(`photos_${componentIndex}`, photoFile);
+        });
+      });
+
+      console.log('📦 Report data to be sent:', formData);
+
+      await createReportMutation.mutateAsync(formData as any);
+
+      console.log('✅ Report created successfully!');
+      navigate('/reports');
+    } catch (error) {
+      console.error('❌ Failed to create report:', error);
+      setErrors({ submit: 'Failed to create report: Internal server error' });
     }
   };
 

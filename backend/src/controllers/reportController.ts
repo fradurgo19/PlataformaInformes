@@ -11,7 +11,8 @@ export const createReport = async (req: Request, res: Response) => {
     await client.query('BEGIN');
     
     const userId = (req as any).user.id;
-    const reportData: CreateReportRequest = req.body;
+    const reportData: CreateReportRequest = JSON.parse(req.body.reportData);
+    const files = req.files as Express.Multer.File[];
     
     // Create report
     const reportResult = await client.query(
@@ -38,7 +39,7 @@ export const createReport = async (req: Request, res: Response) => {
     
     // Create components
     if (reportData.components && reportData.components.length > 0) {
-      for (const component of reportData.components) {
+      for (const [index, component] of reportData.components.entries()) {
         const componentResult = await client.query(
           `INSERT INTO components (
             report_id, type, findings, parameters, status, suggestions, priority
@@ -55,20 +56,26 @@ export const createReport = async (req: Request, res: Response) => {
           ]
         );
         
+        const componentId = componentResult.rows[0].id;
+        
         // Handle photos if any
-        if (component.photos && component.photos.length > 0) {
-          for (const photo of component.photos) {
+        const componentPhotos = files.filter(
+          (file) => file.fieldname === `photos_${index}`
+        );
+
+        if (componentPhotos.length > 0) {
+          for (const photo of componentPhotos) {
             await client.query(
               `INSERT INTO photos (
                 component_id, filename, original_name, file_path, file_size, mime_type
               ) VALUES ($1, $2, $3, $4, $5, $6)`,
               [
-                componentResult.rows[0].id,
+                componentId,
                 photo.filename,
-                photo.original_name,
-                photo.file_path,
-                photo.file_size,
-                photo.mime_type
+                photo.originalname,
+                photo.path,
+                photo.size,
+                photo.mimetype,
               ]
             );
           }
