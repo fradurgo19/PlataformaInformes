@@ -139,6 +139,23 @@ export const ReportViewPage: React.FC = () => {
   const totalPartsCount = suggestedParts.reduce((sum: number, part: any) => sum + (part.quantity || 0), 0) || 0;
   console.log('📝 Report loaded:', report);
 
+  // Procesar fotos de componentes para asegurar URLs absolutas y barras normales
+  const processedComponents = components.map((component) => ({
+    ...component,
+    photos: Array.isArray(component.photos)
+      ? component.photos.map((p: any) => {
+          let src = typeof p === 'string' ? p : (p.file_path || '');
+          src = src.replace(/\\/g, '/');
+          return src.startsWith('http')
+            ? src
+            : `http://localhost:3001/${src.replace(/^\//, '')}`;
+        })
+      : [],
+  }));
+  
+  // Log para depuración de fotos
+  console.log('Fotos de componentes:', processedComponents.map(c => c.photos));
+
   return (
     <LocalErrorBoundary>
       <DashboardLayout>
@@ -243,8 +260,8 @@ export const ReportViewPage: React.FC = () => {
                 <h2 className="text-xl font-semibold text-slate-900 mb-6">Component Assessment</h2>
                 
                 <div className="space-y-6">
-                  {components.length === 0 && <p className="text-slate-500">No components found for this report.</p>}
-                  {components.map((component, index) => (
+                  {processedComponents.length === 0 && <p className="text-slate-500">No components found for this report.</p>}
+                  {processedComponents.map((component, index) => (
                     <div key={component.id || index} className="border border-slate-200 rounded-lg p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div>
@@ -280,20 +297,22 @@ export const ReportViewPage: React.FC = () => {
                           <p className="text-slate-700">{component.suggestions}</p>
                         </div>
 
-                        {Array.isArray(component.photos) && component.photos.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium text-slate-900 mb-3">Photos</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                              {component.photos.map((photo, photoIndex) => (
-                                <div key={photoIndex} className="relative">
-                                  <img
-                                    src={typeof photo === 'string' ? photo : (photo.file_path || '')}
-                                    alt={`${component.type} photo ${photoIndex + 1}`}
-                                    className="w-full h-24 object-cover rounded-lg border border-slate-200"
-                                  />
-                                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center">
-                                    <Camera className="w-5 h-5 text-white opacity-0 hover:opacity-100 transition-opacity" />
-                                  </div>
+                        {component.photos && component.photos.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="font-medium text-sm text-slate-700 mb-2 flex items-center">
+                              <Camera className="w-4 h-4 mr-2" />
+                              Photos
+                            </h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                              {component.photos.map((photo: string, index: number) => (
+                                <div key={index} className="aspect-w-1 aspect-h-1">
+                                   <img
+                                      src={photo}
+                                      alt={`Photo ${index + 1}`}
+                                      className="w-full h-auto rounded-lg object-cover"
+                                      style={{ height: '100%' }}
+                                      onError={(e) => console.error(`Error loading image: ${photo}`, e)}
+                                   />
                                 </div>
                               ))}
                             </div>

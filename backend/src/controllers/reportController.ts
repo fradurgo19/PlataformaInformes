@@ -203,9 +203,14 @@ export const getReportById = async (req: Request, res: Response): Promise<void> 
           'SELECT * FROM photos WHERE component_id = $1',
           [component.id]
         );
+        // Ajustar file_path para cada foto
+        const photos = photosResult.rows.map(photo => ({
+          ...photo,
+          file_path: `/uploads/${photo.filename}`
+        }));
         return {
           ...component,
-          photos: photosResult.rows
+          photos
         };
       })
     );

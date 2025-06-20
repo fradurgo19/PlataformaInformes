@@ -4,8 +4,8 @@ import { Camera, X, Upload } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface PhotoUploadProps {
-  photos: File[];
-  onPhotosChange: (photos: File[]) => void;
+  photos: (File | string)[];
+  onPhotosChange: (photos: (File | string)[]) => void;
   maxPhotos?: number;
   label?: string;
 }
@@ -21,14 +21,10 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
-
     const newFiles = Array.from(files);
     const remainingSlots = maxPhotos - photos.length;
-    
     const filesToProcess = newFiles.slice(0, remainingSlots);
-
     const imageFiles = filesToProcess.filter(file => file.type.startsWith('image/'));
-
     if (imageFiles.length > 0) {
       onPhotosChange([...photos, ...imageFiles]);
     }
@@ -101,14 +97,21 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       {photos.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {photos.map((photo, index) => {
-            const objectUrl = URL.createObjectURL(photo);
+            let src = '';
+            if (typeof photo === 'string') {
+              src = photo;
+            } else if (photo instanceof File) {
+              src = URL.createObjectURL(photo);
+            }
             return (
-              <div key={index} className="relative group">
+              <div key={index} className="relative group w-32 h-24">
                 <img
-                  src={objectUrl}
+                  src={src}
                   alt={`Photo ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-lg border border-slate-200"
-                  onLoad={() => URL.revokeObjectURL(objectUrl)}
+                  className="w-full h-full object-cover rounded-lg border border-slate-200"
+                  onLoad={() => {
+                    if (photo instanceof File) URL.revokeObjectURL(src);
+                  }}
                 />
                 <button
                   type="button"

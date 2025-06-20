@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCreateReport } from '../hooks/useReports';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useCreateReport, useReport, useUpdateReport } from '../hooks/useReports';
 import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
 import { Button } from '../components/atoms/Button';
@@ -21,8 +21,15 @@ import { MachineType, ComponentType, Component, Report } from '../types';
 
 export const NewReportPage: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { state: authState } = useAuth();
   const createReportMutation = useCreateReport();
+  const updateReportMutation = useUpdateReport();
+
+  const isEditMode = Boolean(id);
+  const { data: reportResponse, isLoading: isLoadingReport } = useReport(id || '');
+
+  const [initialized, setInitialized] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [reportData, setReportData] = useState({
@@ -45,7 +52,7 @@ export const NewReportPage: React.FC = () => {
     parameters?: string;
     status: 'CORRECTED' | 'PENDING';
     suggestions?: string;
-    photos: File[];
+    photos: string[];
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }>>([]);
   const [suggestedParts, setSuggestedParts] = useState<Array<{
@@ -116,7 +123,6 @@ export const NewReportPage: React.FC = () => {
     { value: '145X4EX', label: '145X4EX' },
     { value: 'SH200-5', label: 'SH200-5' },
     { value: 'SV575', label: 'SV575' },
-    { value: 'ZX200LC-5G', label: 'ZX200LC-5G' },
     { value: '621F T2', label: '621F T2' },
     { value: '870H', label: '870H' },
     { value: 'ZX225USR-3', label: 'ZX225USR-3' },
@@ -159,6 +165,55 @@ export const NewReportPage: React.FC = () => {
     { value: 'CORRECTED', label: 'Corrected' },
     { value: 'PENDING', label: 'Pending' },
   ];
+
+  useEffect(() => {
+    if (isEditMode && reportResponse?.data && !initialized) {
+      const r = reportResponse.data;
+      setReportData({
+        clientName: r.client_name || '',
+        clientContact: '',
+        machineType: r.machine_type || '',
+        model: r.model || '',
+        serialNumber: r.serial_number || '',
+        hourmeter: r.hourmeter?.toString() || '',
+        date: r.report_date ? new Date(r.report_date).toISOString().split('T')[0] : '',
+        location: '',
+        ott: r.ott || '',
+        conclusions: r.conclusions || '',
+        overallSuggestions: r.overall_suggestions || '',
+      });
+      setComponents(
+        Array.isArray(r.components)
+          ? r.components.map((c: any) => ({
+              type: c.type,
+              findings: c.findings,
+              parameters: c.parameters,
+              status: c.status,
+              suggestions: c.suggestions,
+              photos: Array.isArray(c.photos)
+                ? c.photos.map((p: any) => {
+                    const relPath = (p.file_path || '').replace(/\\/g, '/');
+                    return relPath.startsWith('http')
+                      ? relPath
+                      : `http://localhost:3001/${relPath.replace(/^\//, '')}`;
+                  })
+                : [],
+              priority: c.priority,
+            }))
+          : []
+      );
+      setSuggestedParts(
+        Array.isArray(r.suggested_parts)
+          ? r.suggested_parts.map((p: any) => ({
+              partNumber: p.part_number,
+              description: p.description,
+              quantity: p.quantity,
+            }))
+          : []
+      );
+      setInitialized(true);
+    }
+  }, [isEditMode, reportResponse, initialized]);
 
   const validateAllSteps = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -300,46 +355,62 @@ export const NewReportPage: React.FC = () => {
     try {
       console.log('🚀 Starting report creation...');
       
-      const reportJson = {
-        client_name: reportData.clientName,
-        machine_type: reportData.machineType,
-        model: reportData.model,
-        serial_number: reportData.serialNumber,
-        hourmeter: Number(reportData.hourmeter),
-        report_date: reportData.date,
-        ott: reportData.ott,
-        conclusions: reportData.conclusions,
-        overall_suggestions: reportData.overallSuggestions,
-        components: components.map(c => ({
-          type: c.type,
-          findings: c.findings,
-          parameters: c.parameters,
-          status: c.status,
-          suggestions: c.suggestions,
-          priority: c.priority,
-        })),
-        suggested_parts: suggestedParts.map(p => ({
-          part_number: p.partNumber,
-          description: p.description,
-          quantity: Number(p.quantity) || 1
-        })),
-      };
-
-      const formData = new FormData();
-      formData.append('reportData', JSON.stringify(reportJson));
-
-      components.forEach((component, componentIndex) => {
-        component.photos.forEach(photoFile => {
-          formData.append(`photos_${componentIndex}`, photoFile);
+      if (isEditMode && id) {
+        await updateReportMutation.mutateAsync({
+          id,
+          updates: {
+            client_name: reportData.clientName,
+            machine_type: reportData.machineType,
+            model: reportData.model,
+            serial_number: reportData.serialNumber,
+            hourmeter: Number(reportData.hourmeter),
+            report_date: reportData.date,
+            ott: reportData.ott,
+            conclusions: reportData.conclusions,
+            overall_suggestions: reportData.overallSuggestions,
+          },
         });
-      });
+        navigate(`/reports/${id}`);
+      } else {
+        const reportJson = {
+          client_name: reportData.clientName,
+          machine_type: reportData.machineType,
+          model: reportData.model,
+          serial_number: reportData.serialNumber,
+          hourmeter: Number(reportData.hourmeter),
+          report_date: reportData.date,
+          ott: reportData.ott,
+          conclusions: reportData.conclusions,
+          overall_suggestions: reportData.overallSuggestions,
+          components: components.map(c => ({
+            type: c.type,
+            findings: c.findings,
+            parameters: c.parameters,
+            status: c.status,
+            suggestions: c.suggestions,
+            priority: c.priority,
+          })),
+          suggested_parts: suggestedParts.map(p => ({
+            part_number: p.partNumber,
+            description: p.description,
+            quantity: Number(p.quantity) || 1
+          })),
+        };
 
-      console.log('📦 Report data to be sent:', formData);
+        const formData = new FormData();
+        formData.append('reportData', JSON.stringify(reportJson));
 
-      await createReportMutation.mutateAsync(formData as any);
+        components.forEach((component, componentIndex) => {
+          component.photos.forEach(photoFile => {
+            formData.append(`photos_${componentIndex}`, photoFile);
+          });
+        });
 
-      console.log('✅ Report created successfully!');
-      navigate('/reports');
+        console.log('📦 Report data to be sent:', formData);
+
+        await createReportMutation.mutateAsync(formData as any);
+        navigate('/reports');
+      }
     } catch (error) {
       console.error('❌ Failed to create report:', error);
       setErrors({ submit: 'Failed to create report: Internal server error' });
@@ -648,6 +719,16 @@ export const NewReportPage: React.FC = () => {
     { number: 2, title: 'Components', component: renderStep2 },
     { number: 3, title: 'Final Section', component: renderStep3 },
   ];
+
+  if (isEditMode && isLoadingReport) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-96">
+          <LoadingSpinner size="lg" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
