@@ -21,7 +21,7 @@ router.use(authenticateToken as any);
 router.post('/', upload.any(), handleUploadError, createReport as any);
 router.get('/', getReports as any);
 router.get('/:id', getReportById as any);
-router.put('/:id', updateReport as any);
+router.put('/:id', upload.any(), handleUploadError, updateReport as any);
 router.delete('/:id', deleteReport as any);
 
 // PDF and Email routes

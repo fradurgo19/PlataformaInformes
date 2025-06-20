@@ -33,7 +33,7 @@ export const useUpdateReport = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<Report> }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: FormData }) =>
       apiService.updateReport(id, updates),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });

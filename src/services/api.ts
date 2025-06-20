@@ -160,11 +160,16 @@ class ApiService {
     return this.handleResponse<Report>(response);
   }
 
-  async updateReport(id: string, updates: Partial<Report>): Promise<ApiResponse<Report>> {
+  async updateReport(id: string, updates: FormData): Promise<ApiResponse<Report>> {
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/reports/${id}`, {
       method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(updates),
+      headers: headers,
+      body: updates,
     });
 
     return this.handleResponse<Report>(response);

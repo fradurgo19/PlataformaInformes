@@ -47,12 +47,13 @@ export const NewReportPage: React.FC = () => {
   });
 
   const [components, setComponents] = useState<Array<{
+    id?: string;
     type: ComponentType;
     findings: string;
     parameters?: string;
     status: 'CORRECTED' | 'PENDING';
     suggestions?: string;
-    photos: string[];
+    photos: (File | string)[];
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }>>([]);
   const [suggestedParts, setSuggestedParts] = useState<Array<{
@@ -185,6 +186,7 @@ export const NewReportPage: React.FC = () => {
       setComponents(
         Array.isArray(r.components)
           ? r.components.map((c: any) => ({
+              id: c.id,
               type: c.type,
               findings: c.findings,
               parameters: c.parameters,
@@ -353,67 +355,59 @@ export const NewReportPage: React.FC = () => {
     }
 
     try {
-      console.log('🚀 Starting report creation...');
+      const reportJson = {
+        client_name: reportData.clientName,
+        machine_type: reportData.machineType,
+        model: reportData.model,
+        serial_number: reportData.serialNumber,
+        hourmeter: Number(reportData.hourmeter),
+        report_date: reportData.date,
+        ott: reportData.ott,
+        conclusions: reportData.conclusions,
+        overall_suggestions: reportData.overallSuggestions,
+        status: isEditMode ? (reportResponse?.data?.status || 'draft') : 'draft',
+        components: components.map(c => ({
+          id: c.id,
+          type: c.type,
+          findings: c.findings,
+          parameters: c.parameters,
+          status: c.status,
+          suggestions: c.suggestions,
+          priority: c.priority,
+          photos: c.photos.filter(p => typeof p === 'string'),
+        })),
+        suggested_parts: suggestedParts.map(p => ({
+          part_number: p.partNumber,
+          description: p.description,
+          quantity: Number(p.quantity) || 1
+        })),
+      };
+
+      const formData = new FormData();
+      formData.append('reportData', JSON.stringify(reportJson));
+
+      components.forEach((component, componentIndex) => {
+        // Append only new files to FormData
+        component.photos.forEach((photo: any) => {
+          if (photo instanceof File) {
+            formData.append(`photos_${componentIndex}`, photo);
+          }
+        });
+      });
       
       if (isEditMode && id) {
-        await updateReportMutation.mutateAsync({
-          id,
-          updates: {
-            client_name: reportData.clientName,
-            machine_type: reportData.machineType,
-            model: reportData.model,
-            serial_number: reportData.serialNumber,
-            hourmeter: Number(reportData.hourmeter),
-            report_date: reportData.date,
-            ott: reportData.ott,
-            conclusions: reportData.conclusions,
-            overall_suggestions: reportData.overallSuggestions,
-          },
-        });
+        console.log('🚀 Updating report with FormData...');
+        await updateReportMutation.mutateAsync({ id, updates: formData as any });
         navigate(`/reports/${id}`);
       } else {
-        const reportJson = {
-          client_name: reportData.clientName,
-          machine_type: reportData.machineType,
-          model: reportData.model,
-          serial_number: reportData.serialNumber,
-          hourmeter: Number(reportData.hourmeter),
-          report_date: reportData.date,
-          ott: reportData.ott,
-          conclusions: reportData.conclusions,
-          overall_suggestions: reportData.overallSuggestions,
-          components: components.map(c => ({
-            type: c.type,
-            findings: c.findings,
-            parameters: c.parameters,
-            status: c.status,
-            suggestions: c.suggestions,
-            priority: c.priority,
-          })),
-          suggested_parts: suggestedParts.map(p => ({
-            part_number: p.partNumber,
-            description: p.description,
-            quantity: Number(p.quantity) || 1
-          })),
-        };
-
-        const formData = new FormData();
-        formData.append('reportData', JSON.stringify(reportJson));
-
-        components.forEach((component, componentIndex) => {
-          component.photos.forEach(photoFile => {
-            formData.append(`photos_${componentIndex}`, photoFile);
-          });
-        });
-
-        console.log('📦 Report data to be sent:', formData);
-
+        console.log('🚀 Creating new report with FormData...');
         await createReportMutation.mutateAsync(formData as any);
         navigate('/reports');
       }
     } catch (error) {
-      console.error('❌ Failed to create report:', error);
-      setErrors({ submit: 'Failed to create report: Internal server error' });
+      console.error('❌ Failed to save report:', error);
+      const errorMessage = (error as any)?.response?.data?.error || 'Internal server error';
+      setErrors({ submit: `Failed to save report: ${errorMessage}` });
     }
   };
 

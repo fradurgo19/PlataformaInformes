@@ -248,64 +248,104 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
   try {
     await client.query('BEGIN');
     
+    const { id } = req.params; // Report ID
     const userId = (req as any).user.id;
-    const reportId = req.params.id;
-    const updateData = req.body;
-    
-    // Check if report exists and belongs to user
-    const existingReport = await client.query(
-      'SELECT id FROM reports WHERE id = $1 AND user_id = $2',
-      [reportId, userId]
-    );
-    
-    if (existingReport.rows.length === 0) {
-      res.status(404).json({
-        success: false,
-        error: 'Report not found'
-      });
-      return;
-    }
-    
-    // Update report
-    const reportResult = await client.query(
+    const reportData = JSON.parse(req.body.reportData);
+    const files = req.files as Express.Multer.File[];
+
+    // 1. Update the main report details
+    const updatedReportResult = await client.query(
       `UPDATE reports SET 
         client_name = $1, machine_type = $2, model = $3, serial_number = $4,
-        hourmeter = $5, report_date = $6, ott = $7, conclusions = $8, 
-        overall_suggestions = $9, status = $10, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $11 AND user_id = $12 
-       RETURNING *`,
+        hourmeter = $5, report_date = $6, ott = $7, conclusions = $8,
+        overall_suggestions = $9, status = $10
+      WHERE id = $11 AND user_id = $12 RETURNING *`,
       [
-        updateData.client_name,
-        updateData.machine_type,
-        updateData.model,
-        updateData.serial_number,
-        updateData.hourmeter,
-        updateData.report_date,
-        updateData.ott,
-        updateData.conclusions || null,
-        updateData.overall_suggestions || null,
-        updateData.status || 'draft',
-        reportId,
-        userId
+        reportData.client_name, reportData.machine_type, reportData.model,
+        reportData.serial_number, reportData.hourmeter, reportData.report_date,
+        reportData.ott, reportData.conclusions, reportData.overall_suggestions,
+        reportData.status, id, userId,
       ]
     );
+
+    if (updatedReportResult.rows.length === 0) {
+      throw new Error('Report not found or user not authorized.');
+    }
+
+    // --- Components and Photos Synchronization ---
+    const feComponents = reportData.components || [];
+    const feComponentIds = feComponents.map((c: any) => c.id).filter(Boolean);
+
+    // Delete components that are no longer in the frontend
+    await client.query(
+      `DELETE FROM components WHERE report_id = $1 AND id NOT IN (SELECT unnest($2::uuid[]))`,
+      [id, feComponentIds]
+    );
     
+    for (const [index, componentData] of feComponents.entries()) {
+      let componentId = componentData.id;
+
+      // Upsert component (create if no id, update if id exists)
+      if (componentId) {
+        // Update existing component
+        await client.query(
+          `UPDATE components SET type=$1, findings=$2, parameters=$3, status=$4, suggestions=$5, priority=$6 
+           WHERE id=$7`,
+          [componentData.type, componentData.findings, componentData.parameters, componentData.status, componentData.suggestions, componentData.priority, componentId]
+        );
+      } else {
+        // Create new component
+        const newCompResult = await client.query(
+          `INSERT INTO components (report_id, type, findings, parameters, status, suggestions, priority)
+           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+          [id, componentData.type, componentData.findings, componentData.parameters, componentData.status, componentData.suggestions, componentData.priority]
+        );
+        componentId = newCompResult.rows[0].id;
+      }
+      
+      // --- Photos Synchronization for this component ---
+      const fePhotoUrls = componentData.photos.filter((p: any) => typeof p === 'string');
+      const fePhotoFilenames = fePhotoUrls.map((url: string) => url.split('/').pop());
+
+      // Delete photos removed from the frontend
+      await client.query(
+        `DELETE FROM photos WHERE component_id = $1 AND filename NOT IN (SELECT unnest($2::text[]))`,
+        [componentId, fePhotoFilenames]
+      );
+      
+      // Add new photos
+      const newPhotos = files.filter(file => file.fieldname === `photos_${index}`);
+      for (const photo of newPhotos) {
+        await client.query(
+          `INSERT INTO photos (component_id, filename, original_name, file_path, file_size, mime_type)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [componentId, photo.filename, photo.originalname, photo.path, photo.size, photo.mimetype]
+        );
+      }
+    }
+
+    // --- Suggested Parts Synchronization (simple delete and recreate) ---
+    await client.query('DELETE FROM suggested_parts WHERE report_id = $1', [id]);
+    if (reportData.suggested_parts && reportData.suggested_parts.length > 0) {
+      for (const part of reportData.suggested_parts) {
+        await client.query(
+          `INSERT INTO suggested_parts (report_id, part_number, description, quantity)
+           VALUES ($1, $2, $3, $4)`,
+          [id, part.part_number, part.description, part.quantity]
+        );
+      }
+    }
+
     await client.query('COMMIT');
-    
-    const response: ApiResponse<Report> = {
+    res.json({
       success: true,
-      data: reportResult.rows[0],
+      data: updatedReportResult.rows[0],
       message: 'Report updated successfully'
-    };
-    
-    res.json(response);
+    });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Update report error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   } finally {
     client.release();
   }
