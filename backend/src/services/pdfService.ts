@@ -1,16 +1,36 @@
 import puppeteer from 'puppeteer';
 import { Report, Component, Photo, SuggestedPart } from '../types';
+import fs from 'fs';
+import path from 'path';
 
 export class PDFService {
   private static async generateHTML(report: Report, components: Component[], photos: Photo[], suggestedParts: SuggestedPart[]): Promise<string> {
-    const componentsHTML = components.map(component => {
+    const componentsHTMLPromises = components.map(async (component) => {
       const componentPhotos = photos.filter(photo => photo.component_id === component.id);
-      const photosHTML = componentPhotos.map(photo => 
-        `<img src="data:image/jpeg;base64,${photo.file_path}" alt="Foto del componente" style="max-width: 200px; margin: 5px; border: 1px solid #ddd;">`
-      ).join('');
+      
+      const photosHTMLPromises = componentPhotos.map(async (photo) => {
+        // Construct the absolute path to the image file
+        const imagePath = path.join(__dirname, '..', '..', photo.file_path);
+        
+        try {
+          // Read the image file and convert it to base64
+          const imageBuffer = await fs.promises.readFile(imagePath);
+          const imageBase64 = imageBuffer.toString('base64');
+          const mimeType = photo.mime_type || 'image/jpeg'; // Fallback MIME type
+          
+          return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" style="max-width: 200px; margin: 5px; border: 1px solid #ddd; display: inline-block; vertical-align: top;">`;
+        } catch (error) {
+          console.error(`Error reading image file for PDF: ${imagePath}`, error);
+          // Return a placeholder or empty string if image is not found
+          return `<div style="width: 200px; height: 150px; border: 1px dashed #ccc; text-align: center; padding: 10px; display: inline-block;">Image not found</div>`;
+        }
+      });
+
+      const photosHTMLArray = await Promise.all(photosHTMLPromises);
+      const photosHTML = photosHTMLArray.join('');
 
       return `
-        <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+        <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
           <p><strong>Hallazgos:</strong> ${component.findings}</p>
           ${component.parameters ? `<p><strong>Parámetros:</strong> ${component.parameters}</p>` : ''}
@@ -20,10 +40,13 @@ export class PDFService {
           ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos:</strong><br>${photosHTML}</div>` : ''}
         </div>
       `;
-    }).join('');
+    });
+
+    const componentsHTMLArray = await Promise.all(componentsHTMLPromises);
+    const componentsHTML = componentsHTMLArray.join('');
 
     const suggestedPartsHTML = suggestedParts.map(part => `
-      <div style="margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">
+      <div style="margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 5px; page-break-inside: avoid;">
         <p><strong>Parte:</strong> ${part.part_number}</p>
         <p><strong>Descripción:</strong> ${part.description}</p>
         <p><strong>Cantidad:</strong> ${part.quantity}</p>
