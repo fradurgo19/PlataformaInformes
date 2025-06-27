@@ -119,21 +119,37 @@ export const createReport = async (req: Request, res: Response) => {
 export const getReports = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
     
-    const reportsResult = await pool.query(
-      `SELECT * FROM reports WHERE user_id = $1 
-       ORDER BY created_at DESC 
-       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
-    );
+    // Si es admin, mostrar todos los reportes. Si no, solo los del usuario
+    let query = '';
+    let countQuery = '';
+    let params: any[] = [];
     
-    const countResult = await pool.query(
-      'SELECT COUNT(*) FROM reports WHERE user_id = $1',
-      [userId]
-    );
+    if (userRole === 'admin') {
+      query = `SELECT r.*, u.full_name as user_full_name 
+               FROM reports r 
+               JOIN users u ON r.user_id = u.id 
+               ORDER BY r.created_at DESC 
+               LIMIT $1 OFFSET $2`;
+      countQuery = 'SELECT COUNT(*) FROM reports';
+      params = [limit, offset];
+    } else {
+      query = `SELECT r.*, u.full_name as user_full_name 
+               FROM reports r 
+               JOIN users u ON r.user_id = u.id 
+               WHERE r.user_id = $1 
+               ORDER BY r.created_at DESC 
+               LIMIT $2 OFFSET $3`;
+      countQuery = 'SELECT COUNT(*) FROM reports WHERE user_id = $1';
+      params = [userId, limit, offset];
+    }
+    
+    const reportsResult = await pool.query(query, params);
+    const countResult = await pool.query(countQuery, userRole === 'admin' ? [] : [userId]);
     
     const totalCount = parseInt(countResult.rows[0].count);
     const totalPages = Math.ceil(totalCount / limit);
