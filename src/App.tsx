@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ReportProvider } from './context/ReportContext';
+import { TypesProvider } from './context/TypesContext';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
@@ -10,6 +11,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { NewReportPage } from './pages/NewReportPage';
 import { ReportViewPage } from './pages/ReportViewPage';
+import ProfilePage from './pages/ProfilePage';
+import RegisterPage from './pages/RegisterPage';
+import AdminPage from './pages/AdminPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -82,6 +86,26 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={<RegisterPage />}
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
@@ -92,13 +116,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ReportProvider>
-          <Router>
-            <div className="min-h-screen bg-slate-50">
-              <AppRoutes />
-            </div>
-          </Router>
-        </ReportProvider>
+        <TypesProvider>
+          <ReportProvider>
+            <Router>
+              <div className="min-h-screen bg-slate-50">
+                <AppRoutes />
+              </div>
+            </Router>
+          </ReportProvider>
+        </TypesProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

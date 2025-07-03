@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCreateReport, useReport, useUpdateReport } from '../hooks/useReports';
 import { useAuth } from '../context/AuthContext';
+import { useTypes } from '../context/TypesContext';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
 import { Button } from '../components/atoms/Button';
 import { Input } from '../components/atoms/Input';
@@ -17,12 +18,12 @@ import {
   ArrowLeft,
   AlertCircle 
 } from 'lucide-react';
-import { MachineType, ComponentType, Component, Report } from '../types';
 
 export const NewReportPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { state: authState } = useAuth();
+  const { machineTypes, componentTypes } = useTypes();
   const createReportMutation = useCreateReport();
   const updateReportMutation = useUpdateReport();
 
@@ -30,12 +31,12 @@ export const NewReportPage: React.FC = () => {
   const { data: reportResponse, isLoading: isLoadingReport } = useReport(id || '');
 
   const [initialized, setInitialized] = useState(false);
-
   const [currentStep, setCurrentStep] = useState(1);
+  
   const [reportData, setReportData] = useState({
     clientName: '',
     clientContact: '',
-    machineType: '' as MachineType,
+    machineType: '',
     model: '',
     serialNumber: '',
     hourmeter: '',
@@ -48,30 +49,34 @@ export const NewReportPage: React.FC = () => {
 
   const [components, setComponents] = useState<Array<{
     id?: string;
-    type: ComponentType;
+    type: string;
     findings: string;
-    parameters?: string;
+    parameters?: { name: string; minValue: number; maxValue: number; measuredValue: number; corrected: boolean; observation: string }[];
     status: 'CORRECTED' | 'PENDING';
     suggestions?: string;
     photos: (File | string)[];
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }>>([]);
+
   const [suggestedParts, setSuggestedParts] = useState<Array<{
     partNumber: string;
     description: string;
     quantity: number;
   }>>([]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const machineTypeOptions = [
-    { value: 'OTHER', label: 'Other' },
-    { value: 'EXCAVATOR', label: 'Excavator' },
-    { value: 'SKID_STEER', label: 'Skid Steer' },
-    { value: 'BACKHOE_LOADER', label: 'Backhoe Loader' },
-    { value: 'MOTOR_GRADER', label: 'Motor Grader' },
-    { value: 'MINI_EXCAVATOR', label: 'Mini Excavator' },
-    { value: 'WHEEL_LOADER', label: 'Wheel Loader' },
-  ];
+  // Convert machine types to options
+  const machineTypeOptions = machineTypes.map(mt => ({
+    value: mt.name,
+    label: mt.name
+  }));
+
+  // Convert component types to options
+  const componentTypeOptions = componentTypes.map(ct => ({
+    value: ct.name,
+    label: ct.name
+  }));
 
   const modelOptions = [
     { value: 'ZX225US-3', label: 'ZX225US-3' },
@@ -143,25 +148,6 @@ export const NewReportPage: React.FC = () => {
     { value: 'ZX85USB-3', label: 'ZX85USB-3' },
   ];
 
-  const componentTypeOptions = [
-    { value: 'CUTTING_TOOL', label: 'Cutting Tool' },
-    { value: 'UNDERCARRIAGE', label: 'Undercarriage' },
-    { value: 'CYLINDER_SEALS', label: 'Cylinder Seals' },
-    { value: 'ENGINE', label: 'Engine' },
-    { value: 'RADIATOR', label: 'Radiator' },
-    { value: 'ENGINE_PERIPHERALS', label: 'Engine Peripherals' },
-    { value: 'BUCKET_FRONT_EQUIPMENT_FITTINGS', label: 'Bucket Front Equipment Fittings' },
-    { value: 'ARM_BOOM_FRONT_EQUIPMENT_FITTINGS', label: 'Arm-Boom Front Equipment Fittings' },
-    { value: 'BOOM_CHASSIS_FRONT_EQUIPMENT_FITTINGS', label: 'Boom-Chassis Front Equipment Fittings' },
-    { value: 'SLEW_RING_PINION', label: 'Slew Ring + Pinion' },
-    { value: 'COUPLING', label: 'Coupling' },
-    { value: 'HYDRAULIC_PUMP', label: 'Hydraulic Pump' },
-    { value: 'SWING_MOTOR', label: 'Swing Motor' },
-    { value: 'TRAVEL_MOTOR', label: 'Travel Motor' },
-    { value: 'SEALS', label: 'Seals' },
-    { value: 'MISCELLANEOUS', label: 'Miscellaneous' },
-  ];
-
   const statusOptions = [
     { value: 'CORRECTED', label: 'Corrected' },
     { value: 'PENDING', label: 'Pending' },
@@ -183,27 +169,43 @@ export const NewReportPage: React.FC = () => {
         conclusions: r.conclusions || '',
         overallSuggestions: r.overall_suggestions || '',
       });
-      setComponents(
-        Array.isArray(r.components)
-          ? r.components.map((c: any) => ({
-              id: c.id,
-              type: c.type,
-              findings: c.findings,
-              parameters: c.parameters,
-              status: c.status,
-              suggestions: c.suggestions,
-              photos: Array.isArray(c.photos)
-                ? c.photos.map((p: any) => {
-                    const relPath = (p.file_path || '').replace(/\\/g, '/');
-                    return relPath.startsWith('http')
-                      ? relPath
-                      : `http://localhost:3001/${relPath.replace(/^\//, '')}`;
-                  })
-                : [],
-              priority: c.priority,
-            }))
-          : []
-      );
+      
+      const loadedComponents = (r.components || []).map((comp: any) => {
+        let params: any[] = [];
+        if (Array.isArray(comp.parameters)) {
+          params = comp.parameters;
+        } else if (typeof comp.parameters === 'string') {
+          try {
+            params = JSON.parse(comp.parameters);
+            if (!Array.isArray(params)) params = [];
+          } catch {
+            params = [];
+          }
+        }
+        
+        let photos: string[] = [];
+        if (Array.isArray(comp.photos)) {
+          photos = comp.photos.map((p: any) => {
+            if (typeof p === 'string') return p;
+            if (p.file_path) {
+              if (p.file_path.startsWith('http')) return p.file_path;
+              return `http://localhost:3001${p.file_path.startsWith('/') ? '' : '/'}${p.file_path}`;
+            }
+            if (p.filename) {
+              return `http://localhost:3001/uploads/${p.filename}`;
+            }
+            return '';
+          });
+        }
+        
+        return {
+          ...comp,
+          parameters: params,
+          photos,
+        };
+      });
+      
+      setComponents(loadedComponents);
       setSuggestedParts(
         Array.isArray(r.suggested_parts)
           ? r.suggested_parts.map((p: any) => ({
@@ -297,10 +299,11 @@ export const NewReportPage: React.FC = () => {
   };
 
   const addComponent = () => {
+    const defaultType = componentTypes.length > 0 ? componentTypes[0].name : '';
     setComponents(prev => [...prev, {
-      type: 'CUTTING_TOOL' as ComponentType,
+      type: defaultType,
       findings: '',
-      parameters: '',
+      parameters: [],
       status: 'PENDING',
       suggestions: '',
       photos: [],
@@ -334,6 +337,32 @@ export const NewReportPage: React.FC = () => {
 
   const removePart = (index: number) => {
     setSuggestedParts(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addParameter = (componentIdx: number) => {
+    setComponents(prev => prev.map((comp, i) =>
+      i === componentIdx
+        ? { ...comp, parameters: [...(comp.parameters || []), { name: '', minValue: 0, maxValue: 0, measuredValue: 0, corrected: false, observation: '' }] }
+        : comp
+    ));
+  };
+
+  const updateParameter = (componentIdx: number, paramIdx: number, field: string, value: any) => {
+    setComponents(prev => prev.map((comp, i) => {
+      if (i !== componentIdx) return comp;
+      const newParams = (comp.parameters || []).map((param, j) =>
+        j === paramIdx ? { ...param, [field]: value } : param
+      );
+      return { ...comp, parameters: newParams };
+    }));
+  };
+
+  const removeParameter = (componentIdx: number, paramIdx: number) => {
+    setComponents(prev => prev.map((comp, i) => {
+      if (i !== componentIdx) return comp;
+      const newParams = (comp.parameters || []).filter((_, j) => j !== paramIdx);
+      return { ...comp, parameters: newParams };
+    }));
   };
 
   const handleSubmit = async () => {
@@ -383,44 +412,51 @@ export const NewReportPage: React.FC = () => {
         })),
       };
 
+      if (!reportJson || typeof reportJson !== 'object') {
+        setErrors({ submit: 'Invalid report data. Please refresh and try again.' });
+        return;
+      }
+
       const formData = new FormData();
       formData.append('reportData', JSON.stringify(reportJson));
 
+      // Add photos to form data
       components.forEach((component, componentIndex) => {
-        // Append only new files to FormData
-        component.photos.forEach((photo: any) => {
+        component.photos.forEach((photo) => {
           if (photo instanceof File) {
             formData.append(`photos_${componentIndex}`, photo);
           }
         });
       });
-      
+
       if (isEditMode && id) {
-        console.log('🚀 Updating report with FormData...');
-        await updateReportMutation.mutateAsync({ id, updates: formData as any });
-        navigate(`/reports/${id}`);
+        await updateReportMutation.mutateAsync({ id, updates: formData });
       } else {
-        console.log('🚀 Creating new report with FormData...');
-        await createReportMutation.mutateAsync(formData as any);
-        navigate('/reports');
+        await createReportMutation.mutateAsync(formData);
       }
+
+      navigate('/reports');
     } catch (error) {
-      console.error('❌ Failed to save report:', error);
-      const errorMessage = (error as any)?.response?.data?.error || 'Internal server error';
-      setErrors({ submit: `Failed to save report: ${errorMessage}` });
+      console.error('Error saving report:', error);
+      setErrors({ submit: 'Error saving report' });
     }
   };
+
+  if (isLoadingReport) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const renderStep1 = () => (
     <div className="space-y-8 min-h-[400px]">
       <div className="border-b border-slate-200 pb-4">
         <h2 className="text-2xl font-bold text-slate-900">Header Section</h2>
         <p className="text-slate-600 mt-1">Fill in the basic information about the machinery inspection</p>
-      </div>
-      
-      {/* Debug info */}
-      <div className="bg-yellow-100 p-4 rounded-lg border border-yellow-300">
-        <p className="text-yellow-800 text-sm">Debug: Form is rendering. Current step: {currentStep}</p>
       </div>
       
       <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
@@ -441,7 +477,7 @@ export const NewReportPage: React.FC = () => {
               label="Machine Type"
               options={machineTypeOptions}
               value={reportData.machineType}
-              onChange={(e) => setReportData(prev => ({ ...prev, machineType: e.target.value as MachineType }))}
+              onChange={(e) => setReportData(prev => ({ ...prev, machineType: e.target.value }))}
               error={errors.machineType}
               placeholder="Select machine type"
               required
@@ -493,13 +529,13 @@ export const NewReportPage: React.FC = () => {
             />
           </div>
           
-          <div className="space-y-2 min-h-[80px] md:col-span-2 border border-gray-200 p-2 rounded">
+          <div className="space-y-2 min-h-[80px] border border-gray-200 p-2 rounded">
             <Input
               label="OTT"
               value={reportData.ott}
               onChange={(e) => setReportData(prev => ({ ...prev, ott: e.target.value }))}
               error={errors.ott}
-              placeholder="Enter OTT information"
+              placeholder="Enter OTT"
               required
             />
           </div>
@@ -509,18 +545,18 @@ export const NewReportPage: React.FC = () => {
   );
 
   const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">Component Assessment</h2>
-        <Button onClick={addComponent}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Component
-        </Button>
+    <div className="space-y-6 min-h-[400px]">
+      <div className="border-b border-slate-200 pb-4">
+        <h2 className="text-2xl font-bold text-slate-900">Component Assessment</h2>
+        <p className="text-slate-600 mt-1">Assess the condition of each component</p>
       </div>
 
       {errors.components && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-600 text-sm">{errors.components}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
+            <p className="text-red-800">{errors.components}</p>
+          </div>
         </div>
       )}
 
@@ -561,243 +597,291 @@ export const NewReportPage: React.FC = () => {
                 label="Findings"
                 value={component.findings}
                 onChange={(e) => updateComponent(index, 'findings', e.target.value)}
-                rows={3}
-                placeholder="Describe observations on the selected component..."
+                error={errors[`component_${index}_findings`]}
+                placeholder="Describe the findings for this component"
                 required
               />
-              <Textarea
-                label="Parameters"
-                value={component.parameters}
-                onChange={(e) => updateComponent(index, 'parameters', e.target.value)}
-                rows={2}
-                placeholder="Technical parameters of the component..."
-                required
-              />
+
+              {/* Parameters Table */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-md font-semibold text-slate-800">Parameters</h4>
+                  <Button type="button" size="sm" variant="outline" onClick={() => addParameter(index)}>
+                    <Plus className="w-4 h-4 mr-1" /> Add Parameter
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border text-sm">
+                    <thead>
+                      <tr className="bg-slate-100">
+                        <th className="border px-2 py-1">Name</th>
+                        <th className="border px-2 py-1">Min Value</th>
+                        <th className="border px-2 py-1">Max Value</th>
+                        <th className="border px-2 py-1">Measured Value</th>
+                        <th className="border px-2 py-1">Corrected</th>
+                        <th className="border px-2 py-1">Observation</th>
+                        <th className="border px-2 py-1">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(component.parameters || []).map((param, paramIdx) => (
+                        <tr key={paramIdx}>
+                          <td className="border px-2 py-1">
+                            <Input
+                              value={param.name}
+                              onChange={e => updateParameter(index, paramIdx, 'name', e.target.value)}
+                              placeholder="Parameter name"
+                            />
+                          </td>
+                          <td className="border px-2 py-1">
+                            <Input
+                              type="number"
+                              value={param.minValue}
+                              onChange={e => updateParameter(index, paramIdx, 'minValue', Number(e.target.value))}
+                              placeholder="Min"
+                            />
+                          </td>
+                          <td className="border px-2 py-1">
+                            <Input
+                              type="number"
+                              value={param.maxValue}
+                              onChange={e => updateParameter(index, paramIdx, 'maxValue', Number(e.target.value))}
+                              placeholder="Max"
+                            />
+                          </td>
+                          <td className="border px-2 py-1">
+                            <Input
+                              type="number"
+                              value={param.measuredValue}
+                              onChange={e => updateParameter(index, paramIdx, 'measuredValue', Number(e.target.value))}
+                              placeholder="Measured"
+                            />
+                          </td>
+                          <td className="border px-2 py-1 text-center">
+                            <input
+                              type="checkbox"
+                              checked={param.corrected}
+                              onChange={e => updateParameter(index, paramIdx, 'corrected', e.target.checked)}
+                            />
+                          </td>
+                          <td className="border px-2 py-1">
+                            <Input
+                              value={param.observation}
+                              onChange={e => updateParameter(index, paramIdx, 'observation', e.target.value)}
+                              placeholder="Observation"
+                            />
+                          </td>
+                          <td className="border px-2 py-1 text-center">
+                            <Button type="button" size="sm" variant="ghost" className="text-red-600" onClick={() => removeParameter(index, paramIdx)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(component.parameters || []).length === 0 && (
+                    <div className="text-slate-400 text-xs py-2 text-center">No parameters added</div>
+                  )}
+                </div>
+              </div>
+
               <Textarea
                 label="Suggestions"
-                value={component.suggestions}
+                value={component.suggestions || ''}
                 onChange={(e) => updateComponent(index, 'suggestions', e.target.value)}
-                rows={2}
-                placeholder="Solution proposal based on findings..."
-                required
+                placeholder="Provide suggestions for this component"
               />
+
               <PhotoUpload
+                label="Photos"
                 photos={component.photos}
                 onPhotosChange={(photos) => updateComponent(index, 'photos', photos)}
-                label="Component Photos"
-                maxPhotos={10}
               />
             </div>
           </div>
         ))}
-
-        {components.length === 0 && (
-          <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-            <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No components added</h3>
-            <p className="text-slate-600 mb-4">Add at least one component to continue.</p>
-            <Button onClick={addComponent}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Component
-            </Button>
-          </div>
-        )}
       </div>
+
+      <Button onClick={addComponent} variant="outline">
+        <Plus className="w-4 h-4 mr-2" />
+        Add Component
+      </Button>
     </div>
   );
 
   const renderStep3 = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-slate-900">Final Section</h2>
+    <div className="space-y-8 min-h-[400px]">
+      <div className="border-b border-slate-200 pb-4">
+        <h2 className="text-2xl font-bold text-slate-900">Conclusions & Parts</h2>
+        <p className="text-slate-600 mt-1">Provide conclusions and suggested parts</p>
+      </div>
 
-      <Textarea
-        label="General Conclusions"
-        value={reportData.conclusions}
-        onChange={(e) => setReportData(prev => ({ ...prev, conclusions: e.target.value }))}
-        error={errors.conclusions}
-        rows={4}
-        placeholder="Provide general conclusions about the machinery inspection..."
-        required
-      />
+      <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
+        <div className="space-y-6">
+          <Textarea
+            label="Conclusions"
+            value={reportData.conclusions}
+            onChange={(e) => setReportData(prev => ({ ...prev, conclusions: e.target.value }))}
+            error={errors.conclusions}
+            placeholder="Provide overall conclusions about the machinery inspection"
+            required
+          />
 
-      <Textarea
-        label="Overall Suggestions"
-        value={reportData.overallSuggestions}
-        onChange={(e) => setReportData(prev => ({ ...prev, overallSuggestions: e.target.value }))}
-        rows={4}
-        placeholder="Provide overall suggestions and recommendations..."
-      />
+          <Textarea
+            label="Overall Suggestions"
+            value={reportData.overallSuggestions}
+            onChange={(e) => setReportData(prev => ({ ...prev, overallSuggestions: e.target.value }))}
+            placeholder="Provide overall suggestions for the machinery"
+          />
+        </div>
+      </div>
 
-      <div>
+      <div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium text-slate-900">Suggested Parts</h3>
-          <Button onClick={addPart} variant="outline">
+          <Button onClick={addPart} variant="outline" size="sm">
             <Plus className="w-4 h-4 mr-2" />
             Add Part
           </Button>
         </div>
 
-        {suggestedParts.length > 0 && (
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Part Number</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Description</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Quantity</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {suggestedParts.map((part, index) => (
-                    <tr key={index}>
-                      <td className="px-4 py-3">
-                        <Input
-                          value={part.partNumber}
-                          onChange={(e) => updatePart(index, 'partNumber', e.target.value)}
-                          placeholder="Enter part number"
-                          className="min-w-0"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <Input
-                          value={part.description}
-                          onChange={(e) => updatePart(index, 'description', e.target.value)}
-                          placeholder="Enter description"
-                          className="min-w-0"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <Input
-                          type="number"
-                          value={part.quantity}
-                          onChange={(e) => updatePart(index, 'quantity', parseInt(e.target.value) || 1)}
-                          min="1"
-                          className="w-20"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removePart(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="space-y-4">
+          {suggestedParts.map((part, index) => (
+            <div key={index} className="flex items-center space-x-4 p-4 border border-slate-200 rounded-lg">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  placeholder="Part Number"
+                  value={part.partNumber}
+                  onChange={(e) => updatePart(index, 'partNumber', e.target.value)}
+                  error={errors[`part_${index}_partNumber`]}
+                />
+                <Input
+                  placeholder="Description"
+                  value={part.description}
+                  onChange={(e) => updatePart(index, 'description', e.target.value)}
+                  error={errors[`part_${index}_description`]}
+                />
+                <Input
+                  type="number"
+                  placeholder="Quantity"
+                  value={part.quantity.toString()}
+                  onChange={(e) => updatePart(index, 'quantity', parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removePart(index)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
-          </div>
-        )}
-
-        {suggestedParts.length === 0 && (
-          <div className="text-center py-8 bg-slate-50 rounded-lg border border-slate-200">
-            <p className="text-slate-600 mb-4">No parts added yet.</p>
-            <Button onClick={addPart} variant="outline">
-              <Plus className="w-4 h-4 mr-2" />
-              Add First Part
-            </Button>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );
 
-  const steps = [
-    { number: 1, title: 'Header Section', component: renderStep1 },
-    { number: 2, title: 'Components', component: renderStep2 },
-    { number: 3, title: 'Final Section', component: renderStep3 },
-  ];
-
-  if (isEditMode && isLoadingReport) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner size="lg" />
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return renderStep1();
+      case 2:
+        return renderStep2();
+      case 3:
+        return renderStep3();
+      default:
+        return null;
+    }
+  };
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">New Report</h1>
-          <p className="text-slate-600 mt-1">Create a new technical inspection report</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">
+            {isEditMode ? 'Edit Report' : 'New Report'}
+          </h1>
+          <p className="text-slate-600 mt-1">
+            {isEditMode ? 'Update the technical inspection report' : 'Create a new technical inspection report'}
+          </p>
         </div>
+
+        {errors.submit && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex">
+              <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
+              <p className="text-red-800">{errors.submit}</p>
+            </div>
+          </div>
+        )}
 
         {/* Progress Steps */}
-        <div className="flex items-center space-x-4 overflow-x-auto pb-4">
-          {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center flex-shrink-0">
-              <div className={`
-                flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium
-                ${currentStep >= step.number 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-slate-200 text-slate-600'
-                }
-              `}>
-                {step.number}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep >= step
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {step}
+                </div>
+                {step < 3 && (
+                  <div
+                    className={`w-16 h-1 mx-2 ${
+                      currentStep > step ? 'bg-blue-600' : 'bg-slate-200'
+                    }`}
+                  />
+                )}
               </div>
-              <span className={`ml-2 text-sm font-medium ${
-                currentStep >= step.number ? 'text-blue-600' : 'text-slate-600'
-              }`}>
-                {step.title}
-              </span>
-              {index < steps.length - 1 && (
-                <div className="w-12 h-0.5 bg-slate-200 ml-4" />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="flex justify-between mt-2 text-sm text-slate-600">
+            <span>Header</span>
+            <span>Components</span>
+            <span>Conclusions</span>
+          </div>
         </div>
 
-        {/* Form Content */}
-        <div className="bg-white rounded-xl border border-slate-200 p-8">
-          {(() => {
-            const currentStepComponent = steps.find(step => step.number === currentStep)?.component;
-            return currentStepComponent ? currentStepComponent() : null;
-          })()}
+        {/* Step Content */}
+        {renderStepContent()}
 
-          {errors.submit && (
-            <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-red-600 text-sm">{errors.submit}</p>
-            </div>
-          )}
+        {/* Navigation */}
+        <div className="flex justify-between mt-8">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Previous
+          </Button>
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-200">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-
-            <div className="flex space-x-3">
-              {currentStep < 3 ? (
-                <Button onClick={handleNext}>
-                  Next
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  isLoading={createReportMutation.isPending}
-                >
+          <div className="flex space-x-4">
+            {currentStep < 3 ? (
+              <Button onClick={handleNext}>
+                Next
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                disabled={createReportMutation.isPending || updateReportMutation.isPending}
+              >
+                {createReportMutation.isPending || updateReportMutation.isPending ? (
+                  <LoadingSpinner />
+                ) : (
                   <Save className="w-4 h-4 mr-2" />
-                  Create Report
-                </Button>
-              )}
-            </div>
+                )}
+                {isEditMode ? 'Update Report' : 'Save Report'}
+              </Button>
+            )}
           </div>
         </div>
       </div>

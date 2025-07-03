@@ -289,7 +289,51 @@ export const ReportViewPage: React.FC = () => {
 
                         <div>
                           <h4 className="text-sm font-medium text-slate-900 mb-2">Parameters</h4>
-                          <p className="text-slate-700">{component.parameters}</p>
+                          {/* eslint-disable-next-line */}
+                          {(() => {
+                            let params: any[] = [];
+                            if (Array.isArray(component.parameters)) {
+                              params = component.parameters;
+                            } else if (typeof component.parameters === 'string') {
+                              try {
+                                params = JSON.parse(component.parameters);
+                                if (!Array.isArray(params)) params = [];
+                              } catch {
+                                params = [];
+                              }
+                            }
+                            if (!params || params.length === 0) {
+                              return <p className="text-slate-700">No parameters.</p>;
+                            }
+                            return (
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full border border-slate-200 rounded-lg text-xs">
+                                  <thead className="bg-slate-50">
+                                    <tr>
+                                      <th className="px-2 py-1 font-semibold text-slate-600">Name</th>
+                                      <th className="px-2 py-1 font-semibold text-slate-600">Min Value</th>
+                                      <th className="px-2 py-1 font-semibold text-slate-600">Max Value</th>
+                                      <th className="px-2 py-1 font-semibold text-slate-600">Measured</th>
+                                      <th className="px-2 py-1 font-semibold text-slate-600">Corrected</th>
+                                      <th className="px-2 py-1 font-semibold text-slate-600">Observation</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {params.map((param, idx) => (
+                                      <tr key={idx}>
+                                        <td className="px-2 py-1">{param.name}</td>
+                                        <td className="px-2 py-1">{param.minValue}</td>
+                                        <td className="px-2 py-1">{param.maxValue}</td>
+                                        <td className="px-2 py-1">{param.measuredValue}</td>
+                                        <td className="px-2 py-1 text-center">{param.corrected ? 'Yes' : 'No'}</td>
+                                        <td className="px-2 py-1">{param.observation}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         <div>

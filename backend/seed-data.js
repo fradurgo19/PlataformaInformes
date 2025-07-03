@@ -27,6 +27,53 @@ async function seedData() {
     const adminId = adminResult.rows[0].id;
     console.log('✅ Found admin user:', adminId);
     
+    // Bulk insert machine types
+    const machineTypes = [
+      { name: 'Excavator', description: 'Excavation machinery' },
+      { name: 'Bulldozer', description: 'Earth-moving machinery' },
+      { name: 'Loader', description: 'Material loading machinery' },
+      { name: 'Breaker', description: 'Demolition machinery' },
+      { name: 'Crane', description: 'Lifting machinery' },
+      { name: 'Compactor', description: 'Soil and asphalt compaction machinery' },
+      { name: 'Grader', description: 'Surface leveling machinery' },
+    ];
+    for (const mt of machineTypes) {
+      await pool.query(
+        `INSERT INTO machine_types (name, description)
+         VALUES ($1, $2)
+         ON CONFLICT (name) DO NOTHING`,
+        [mt.name, mt.description]
+      );
+    }
+    
+    // Bulk insert component types
+    const componentTypes = [
+      { name: 'Accumulator Hammer', description: 'Accumulator for hammer system' },
+      { name: 'Hammer Head', description: 'Head of the hammer' },
+      { name: 'Cabin', description: 'Operator cabin' },
+      { name: 'Chassis', description: 'Main chassis structure' },
+      { name: 'Hammer Main Body', description: 'Main body of the hammer' },
+      { name: 'Steering', description: 'Steering system' },
+      { name: 'Front Axle', description: 'Front axle assembly' },
+      { name: 'Rear Axle', description: 'Rear axle assembly' },
+      { name: 'GET', description: 'Ground Engaging Tools' },
+      { name: 'Swing', description: 'Swing mechanism' },
+      { name: 'Engine', description: 'Engine system' },
+      { name: 'Electrical System', description: 'Electrical system' },
+      { name: 'Hydraulic System', description: 'Hydraulic system' },
+      { name: 'Transmission', description: 'Transmission system' },
+      { name: 'Travel', description: 'Travel/propulsion system' },
+      { name: 'Undercarriage', description: 'Undercarriage assembly' },
+    ];
+    for (const ct of componentTypes) {
+      await pool.query(
+        `INSERT INTO component_types (name, description)
+         VALUES ($1, $2)
+         ON CONFLICT (name) DO NOTHING`,
+        [ct.name, ct.description]
+      );
+    }
+    
     // Check if reports already exist
     const existingReports = await pool.query('SELECT COUNT(*) FROM reports');
     if (parseInt(existingReports.rows[0].count) > 0) {

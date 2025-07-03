@@ -92,6 +92,15 @@ class ApiService {
     return this.handleResponse<User>(response);
   }
 
+  async updateProfile(updates: { full_name: string; email: string; password?: string }): Promise<ApiResponse<User>> {
+    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(updates),
+    });
+    return this.handleResponse<User>(response);
+  }
+
   // Report methods
   async getReports(filters?: ReportFilters): Promise<PaginatedResponse<Report>> {
     const params = new URLSearchParams();
@@ -189,20 +198,21 @@ class ApiService {
     filename: string;
     original_name: string;
     file_path: string;
-    file_size: number;
     mime_type: string;
   }>>> {
     const formData = new FormData();
-    
-    files.forEach((file, index) => {
-      formData.append('photos', file);
+    files.forEach((file) => {
+      formData.append('files', file);
     });
 
-    const response = await fetch(`${API_BASE_URL}/reports/upload`, {
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/upload`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-      },
+      headers: headers,
       body: formData,
     });
 
@@ -210,9 +220,158 @@ class ApiService {
       filename: string;
       original_name: string;
       file_path: string;
-      file_size: number;
       mime_type: string;
     }>>(response);
+  }
+
+  // Machine Types methods
+  async getMachineTypes(): Promise<ApiResponse<Array<{
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+  }>>> {
+    const response = await fetch(`${API_BASE_URL}/machine-types`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<Array<{
+      id: string;
+      name: string;
+      description: string;
+      created_at: string;
+      updated_at: string;
+    }>>(response);
+  }
+
+  async createMachineType(data: { name: string; description: string }): Promise<ApiResponse<{
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/machine-types`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<{
+      id: string;
+      name: string;
+      description: string;
+      created_at: string;
+      updated_at: string;
+    }>(response);
+  }
+
+  async updateMachineType(id: string, data: { name: string; description: string }): Promise<ApiResponse<{
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/machine-types/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<{
+      id: string;
+      name: string;
+      description: string;
+      created_at: string;
+      updated_at: string;
+    }>(response);
+  }
+
+  async deleteMachineType(id: string): Promise<ApiResponse<boolean>> {
+    const response = await fetch(`${API_BASE_URL}/machine-types/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<boolean>(response);
+  }
+
+  // Component Types methods
+  async getComponentTypes(): Promise<ApiResponse<Array<{
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+  }>>> {
+    const response = await fetch(`${API_BASE_URL}/component-types`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<Array<{
+      id: string;
+      name: string;
+      description: string;
+      created_at: string;
+      updated_at: string;
+    }>>(response);
+  }
+
+  async createComponentType(data: { name: string; description: string }): Promise<ApiResponse<{
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/component-types`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<{
+      id: string;
+      name: string;
+      description: string;
+      created_at: string;
+      updated_at: string;
+    }>(response);
+  }
+
+  async updateComponentType(id: string, data: { name: string; description: string }): Promise<ApiResponse<{
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/component-types/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    return this.handleResponse<{
+      id: string;
+      name: string;
+      description: string;
+      created_at: string;
+      updated_at: string;
+    }>(response);
+  }
+
+  async deleteComponentType(id: string): Promise<ApiResponse<boolean>> {
+    const response = await fetch(`${API_BASE_URL}/component-types/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<boolean>(response);
   }
 
   // Token management

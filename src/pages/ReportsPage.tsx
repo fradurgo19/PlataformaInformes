@@ -23,6 +23,7 @@ import { generateReportPDF } from '../utils/pdf';
 
 export const ReportsPage: React.FC = () => {
   const [filters, setFilters] = useState<ReportFilters>({});
+  const [pendingClientName, setPendingClientName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   
   const { data: reportsData, isLoading, error } = useReports(filters);
@@ -51,6 +52,14 @@ export const ReportsPage: React.FC = () => {
       ...prev,
       [key]: value || undefined,
     }));
+    if (key === 'clientName') setPendingClientName(value);
+  };
+
+  const handleSearch = () => {
+    setFilters(prev => ({
+      ...prev,
+      clientName: pendingClientName || undefined,
+    }));
   };
 
   const handleDeleteReport = async (id: string) => {
@@ -68,6 +77,11 @@ export const ReportsPage: React.FC = () => {
     } catch (error) {
       console.error('Error generating PDF:', error);
     }
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+    setPendingClientName('');
   };
 
   if (isLoading) {
@@ -118,8 +132,8 @@ export const ReportsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <Input
               placeholder="Search client name..."
-              value={filters.clientName || ''}
-              onChange={(e) => handleFilterChange('clientName', e.target.value)}
+              value={pendingClientName}
+              onChange={(e) => setPendingClientName(e.target.value)}
             />
             <Select
               options={machineTypeOptions}
@@ -133,7 +147,8 @@ export const ReportsPage: React.FC = () => {
               onChange={(e) => handleFilterChange('status', e.target.value as ReportStatus)}
               placeholder="Select status"
             />
-            <Button variant="outline" onClick={() => setFilters({})}>
+            <Button variant="outline" onClick={handleSearch} className="ml-2">Buscar</Button>
+            <Button variant="outline" onClick={clearFilters}>
               Clear Filters
             </Button>
           </div>

@@ -11,7 +11,16 @@ export const createReport = async (req: Request, res: Response) => {
     await client.query('BEGIN');
     
     const userId = (req as any).user.id;
-    const reportData: CreateReportRequest = JSON.parse(req.body.reportData);
+    const reportDataRaw = req.body.reportData;
+    if (!reportDataRaw) {
+      throw new Error('Missing reportData in request');
+    }
+    let reportData;
+    try {
+      reportData = JSON.parse(reportDataRaw);
+    } catch (err) {
+      throw new Error('Invalid JSON in reportData');
+    }
     const files = req.files as Express.Multer.File[];
     
     // Create report
@@ -49,7 +58,7 @@ export const createReport = async (req: Request, res: Response) => {
             report.id,
             component.type,
             component.findings,
-            component.parameters || null,
+            component.parameters ? JSON.stringify(component.parameters) : null,
             component.status,
             component.suggestions || null,
             component.priority
@@ -124,32 +133,59 @@ export const getReports = async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
     
-    // Si es admin, mostrar todos los reportes. Si no, solo los del usuario
     let query = '';
     let countQuery = '';
+    let filterClauses: string[] = [];
     let params: any[] = [];
-    
+
+    // Filtros dinámicos
+    if (userRole !== 'admin') {
+      filterClauses.push('r.user_id = $' + (params.length + 1));
+      params.push(userId);
+    }
+    if (req.query.machineType) {
+      filterClauses.push('r.machine_type = $' + (params.length + 1));
+      params.push(req.query.machineType);
+    }
+    if (req.query.clientName) {
+      const clientName = Array.isArray(req.query.clientName) ? req.query.clientName[0] : req.query.clientName;
+      filterClauses.push('LOWER(r.client_name) LIKE $' + (params.length + 1));
+      params.push(`%${String(clientName).toLowerCase()}%`);
+    }
+
+    // Construir WHERE
+    const whereClause = filterClauses.length ? 'WHERE ' + filterClauses.join(' AND ') : '';
+
+    // LIMIT y OFFSET siempre al final
+    params.push(limit, offset);
+    const limitIdx = params.length - 1;
+    const offsetIdx = params.length;
+
     if (userRole === 'admin') {
       query = `SELECT r.*, u.full_name as user_full_name 
                FROM reports r 
                JOIN users u ON r.user_id = u.id 
+               ${whereClause}
                ORDER BY r.created_at DESC 
-               LIMIT $1 OFFSET $2`;
-      countQuery = 'SELECT COUNT(*) FROM reports';
-      params = [limit, offset];
+               LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+      countQuery = `SELECT COUNT(*) FROM reports r ${whereClause}`;
     } else {
       query = `SELECT r.*, u.full_name as user_full_name 
                FROM reports r 
                JOIN users u ON r.user_id = u.id 
-               WHERE r.user_id = $1 
+               ${whereClause}
                ORDER BY r.created_at DESC 
-               LIMIT $2 OFFSET $3`;
-      countQuery = 'SELECT COUNT(*) FROM reports WHERE user_id = $1';
-      params = [userId, limit, offset];
+               LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+      countQuery = `SELECT COUNT(*) FROM reports r ${whereClause}`;
     }
     
+    console.log('--- SQL DEBUG ---');
+    console.log('Query:', query);
+    console.log('Params:', params);
     const reportsResult = await pool.query(query, params);
-    const countResult = await pool.query(countQuery, userRole === 'admin' ? [] : [userId]);
+    // Solo pasar los parámetros de filtro a countQuery (sin limit/offset)
+    const filterParams = params.slice(0, params.length - 2);
+    const countResult = await pool.query(countQuery, filterParams.length > 0 ? filterParams : undefined);
     
     const totalCount = parseInt(countResult.rows[0].count);
     const totalPages = Math.ceil(totalCount / limit);
@@ -178,6 +214,9 @@ export const getReports = async (req: Request, res: Response) => {
     res.json(response);
   } catch (error) {
     console.error('Get reports error:', error);
+    if (error instanceof Error && (error as any).stack) {
+      console.error('Stack:', (error as any).stack);
+    }
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -192,7 +231,7 @@ export const getReportById = async (req: Request, res: Response): Promise<void> 
     
     // Get report with components, photos, and suggested parts
     const reportResult = await pool.query(
-      'SELECT * FROM reports WHERE id = $1 AND user_id = $2',
+      `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1 AND r.user_id = $2`,
       [reportId, userId]
     );
     
@@ -226,6 +265,7 @@ export const getReportById = async (req: Request, res: Response): Promise<void> 
         }));
         return {
           ...component,
+          parameters: component.parameters ? JSON.parse(component.parameters) : [],
           photos
         };
       })
@@ -266,7 +306,16 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
     
     const { id } = req.params; // Report ID
     const userId = (req as any).user.id;
-    const reportData = JSON.parse(req.body.reportData);
+    const reportDataRaw = req.body.reportData;
+    if (!reportDataRaw) {
+      throw new Error('Missing reportData in request');
+    }
+    let reportData;
+    try {
+      reportData = JSON.parse(reportDataRaw);
+    } catch (err) {
+      throw new Error('Invalid JSON in reportData');
+    }
     const files = req.files as Express.Multer.File[];
 
     // 1. Update the main report details
@@ -307,14 +356,14 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
         await client.query(
           `UPDATE components SET type=$1, findings=$2, parameters=$3, status=$4, suggestions=$5, priority=$6 
            WHERE id=$7`,
-          [componentData.type, componentData.findings, componentData.parameters, componentData.status, componentData.suggestions, componentData.priority, componentId]
+          [componentData.type, componentData.findings, componentData.parameters ? JSON.stringify(componentData.parameters) : null, componentData.status, componentData.suggestions, componentData.priority, componentId]
         );
       } else {
         // Create new component
         const newCompResult = await client.query(
           `INSERT INTO components (report_id, type, findings, parameters, status, suggestions, priority)
            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-          [id, componentData.type, componentData.findings, componentData.parameters, componentData.status, componentData.suggestions, componentData.priority]
+          [id, componentData.type, componentData.findings, componentData.parameters ? JSON.stringify(componentData.parameters) : null, componentData.status, componentData.suggestions, componentData.priority]
         );
         componentId = newCompResult.rows[0].id;
       }
@@ -423,7 +472,7 @@ export const downloadPDF = async (req: Request, res: Response): Promise<void> =>
     
     // Get report with all related data
     const reportResult = await pool.query(
-      'SELECT * FROM reports WHERE id = $1 AND user_id = $2',
+      `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1 AND r.user_id = $2`,
       [reportId, userId]
     );
     

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useReports } from '../hooks/useReports';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
@@ -25,6 +25,8 @@ import { ReportFilters, MachineType, ReportStatus, Report } from '../types';
 export const DashboardPage: React.FC = () => {
   const [filters, setFilters] = useState<ReportFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [clientNameInput, setClientNameInput] = useState('');
+  const [pendingClientName, setPendingClientName] = useState('');
   const { data: reportsData, isLoading, error } = useReports(filters);
 
   const machineTypeOptions = [
@@ -52,8 +54,18 @@ export const DashboardPage: React.FC = () => {
     }));
   };
 
+  const handleSearch = () => {
+    setFilters(prev => ({
+      ...prev,
+      clientName: pendingClientName || undefined,
+    }));
+    setClientNameInput(pendingClientName);
+  };
+
   const clearFilters = () => {
     setFilters({});
+    setClientNameInput('');
+    setPendingClientName('');
   };
 
   const getStatusIcon = (status: ReportStatus) => {
@@ -202,9 +214,10 @@ export const DashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
               <Input
                 placeholder="Search client name..."
-                value={filters.clientName || ''}
-                onChange={(e) => handleFilterChange('clientName', e.target.value)}
+                value={pendingClientName}
+                onChange={(e) => setPendingClientName(e.target.value)}
               />
+              <Button variant="outline" size="sm" onClick={handleSearch} className="ml-2">Buscar</Button>
               <Select
                 options={machineTypeOptions}
                 value={filters.machineType || ''}

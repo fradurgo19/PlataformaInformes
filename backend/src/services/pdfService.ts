@@ -2,9 +2,23 @@ import puppeteer from 'puppeteer';
 import { Report, Component, Photo, SuggestedPart } from '../types';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
 
 export class PDFService {
+  private static async getLogoBase64(): Promise<string> {
+    const logoUrl = 'https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png';
+    try {
+      const response = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+      const base64 = Buffer.from(response.data, 'binary').toString('base64');
+      return `data:image/png;base64,${base64}`;
+    } catch (error) {
+      console.error('Error downloading logo for PDF:', error);
+      return '';
+    }
+  }
+
   private static async generateHTML(report: Report, components: Component[], photos: Photo[], suggestedParts: SuggestedPart[]): Promise<string> {
+    const logoBase64 = await this.getLogoBase64();
     const componentsHTMLPromises = components.map(async (component) => {
       const componentPhotos = photos.filter(photo => photo.component_id === component.id);
       
@@ -62,6 +76,8 @@ export class PDFService {
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
           .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
+          .logo-container { width: 100%; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
+          .logo-img { width: 100%; max-width: 600px; height: auto; object-fit: contain; display: block; margin: 0 auto; }
           .section { margin: 20px 0; }
           .section h2 { color: #2563eb; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
           .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
@@ -75,6 +91,9 @@ export class PDFService {
         </style>
       </head>
       <body>
+        <div class="logo-container">
+          <img class="logo-img" src="${logoBase64}" alt="Company Logo" />
+        </div>
         <div class="header">
           <h1>🏗️ Reporte de Inspección de Maquinaria</h1>
           <p><strong>Cliente:</strong> ${report.client_name}</p>
@@ -134,6 +153,7 @@ export class PDFService {
 
         <div class="footer">
           <p>Reporte generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+          <p>Generado por: ${report.user_full_name || report.user_id || 'Usuario no especificado'}</p>
           <p>Plataforma de Informes de Maquinaria - Sistema de Gestión Técnica</p>
         </div>
       </body>

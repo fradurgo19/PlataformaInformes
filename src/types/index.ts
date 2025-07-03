@@ -1,29 +1,18 @@
-export type MachineType = 
-  | 'OTHER'
-  | 'EXCAVATOR' 
-  | 'SKID_STEER'
-  | 'BACKHOE_LOADER'
-  | 'MOTOR_GRADER'
-  | 'MINI_EXCAVATOR'
-  | 'WHEEL_LOADER';
+export interface MachineType {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
 
-export type ComponentType = 
-  | 'CUTTING_TOOL'
-  | 'UNDERCARRIAGE'
-  | 'CYLINDER_SEALS'
-  | 'ENGINE'
-  | 'RADIATOR'
-  | 'ENGINE_PERIPHERALS'
-  | 'BUCKET_FRONT_EQUIPMENT_FITTINGS'
-  | 'ARM_BOOM_FRONT_EQUIPMENT_FITTINGS'
-  | 'BOOM_CHASSIS_FRONT_EQUIPMENT_FITTINGS'
-  | 'SLEW_RING_PINION'
-  | 'COUPLING'
-  | 'HYDRAULIC_PUMP'
-  | 'SWING_MOTOR'
-  | 'TRAVEL_MOTOR'
-  | 'SEALS'
-  | 'MISCELLANEOUS';
+export interface ComponentType {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export type ComponentStatus = 'CORRECTED' | 'PENDING';
 
@@ -52,12 +41,21 @@ export interface Photo {
   created_at: string;
 }
 
+export interface Parameter {
+  name: string;
+  minValue: number;
+  maxValue: number;
+  measuredValue: number;
+  corrected: boolean;
+  observation: string;
+}
+
 export interface Component {
   id: string;
   report_id: string;
-  type: ComponentType;
+  type: string; // ComponentType name
   findings: string;
-  parameters?: string;
+  parameters?: Parameter[];
   status: ComponentStatus;
   suggestions?: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -80,7 +78,7 @@ export interface Report {
   id: string;
   user_id: string;
   client_name: string;
-  machine_type: MachineType;
+  machine_type: string; // MachineType name
   model: string;
   serial_number: string;
   hourmeter: number;
@@ -112,7 +110,7 @@ export interface PaginatedResponse<T> {
 
 export interface ReportFilters {
   status?: ReportStatus;
-  machineType?: MachineType;
+  machineType?: string; // MachineType name
   clientName?: string;
   page?: number;
   limit?: number;
@@ -131,7 +129,7 @@ export interface LoginResponse {
 
 export interface CreateReportRequest {
   client_name: string;
-  machine_type: MachineType;
+  machine_type: string; // MachineType name
   model: string;
   serial_number: string;
   hourmeter: number;

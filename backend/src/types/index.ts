@@ -25,6 +25,16 @@ export interface Report {
   updated_at: string;
   components?: Component[];
   suggested_parts?: SuggestedPart[];
+  user_full_name?: string;
+}
+
+export interface Parameter {
+  name: string;
+  minValue: number;
+  maxValue: number;
+  measuredValue: number;
+  corrected: boolean;
+  observation: string;
 }
 
 export interface Component {
@@ -32,7 +42,7 @@ export interface Component {
   report_id: string;
   type: ComponentType;
   findings: string;
-  parameters?: string;
+  parameters?: Parameter[];
   status: 'CORRECTED' | 'PENDING';
   suggestions?: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH';

@@ -72,6 +72,13 @@ export const LoginPage: React.FC = () => {
         </Button>
 
         <div className="text-center text-sm text-slate-600">
+          <span>Don&apos;t have an account? </span>
+          <button type="button" className="text-blue-600 hover:underline" onClick={() => navigate('/register')}>
+            Register
+          </button>
+        </div>
+
+        <div className="text-center text-sm text-slate-600">
           <p>Demo credentials:</p>
           <p className="font-medium">Username: admin</p>
           <p className="font-medium">Password: admin123</p>

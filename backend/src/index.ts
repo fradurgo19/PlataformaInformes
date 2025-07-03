@@ -8,6 +8,8 @@ import dotenv from 'dotenv';
 // Import routes
 import authRoutes from './routes/auth';
 import reportRoutes from './routes/reports';
+import machineTypeRoutes from './routes/machineTypes';
+import componentTypeRoutes from './routes/componentTypes';
 
 // Load environment variables from backend directory
 dotenv.config();
@@ -73,6 +75,8 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/machine-types', machineTypeRoutes);
+app.use('/api/component-types', componentTypeRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

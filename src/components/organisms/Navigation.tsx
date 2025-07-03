@@ -10,7 +10,8 @@ import {
   LogOut, 
   Settings,
   Menu,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -28,6 +29,11 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/reports/new', label: 'New Report', icon: Plus },
   ];
+
+  // Add admin link if user is admin
+  if (authState.user?.role === 'admin') {
+    navItems.push({ path: '/admin', label: 'Administration', icon: Shield });
+  }
 
   const isActivePath = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
@@ -103,7 +109,7 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 truncate">
-                  {authState.user?.firstName} {authState.user?.lastName}
+                  {authState.user?.full_name}
                 </p>
                 <p className="text-xs text-slate-500 truncate">
                   {authState.user?.role}
