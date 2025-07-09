@@ -16,6 +16,7 @@ import reportRoutes from './routes/reports';
 import machineTypeRoutes from './routes/machineTypes';
 import componentTypeRoutes from './routes/componentTypes';
 import alertRoutes from './routes/alerts';
+import devRoutes from './routes/dev';
 
 // Load environment variables from backend directory
 dotenv.config();
@@ -101,6 +102,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/machine-types', machineTypeRoutes);
 app.use('/api/component-types', componentTypeRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/dev', devRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

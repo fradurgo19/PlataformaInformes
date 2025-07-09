@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limiter general para todas las rutas
 export const generalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutos por defecto
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // máximo 100 requests por ventana
+  max: process.env.NODE_ENV === 'development' ? 1000 : parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // más permisivo en desarrollo
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
@@ -15,7 +15,7 @@ export const generalLimiter = rateLimit({
 // Rate limiter específico para autenticación
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 intentos de login por IP
+  max: process.env.NODE_ENV === 'development' ? 50 : 5, // más permisivo en desarrollo
   message: {
     success: false,
     error: 'Too many login attempts, please try again later.'
