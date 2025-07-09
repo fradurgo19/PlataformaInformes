@@ -79,12 +79,21 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password, full_name } = req.body;
+    const { username, email, password, full_name, role = 'user' } = req.body;
 
     if (!username || !email || !password || !full_name) {
       res.status(400).json({
         success: false,
         error: 'All fields are required'
+      });
+      return;
+    }
+
+    // Validate role
+    if (role && !['admin', 'user', 'viewer'].includes(role)) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid role. Must be admin, user, or viewer'
       });
       return;
     }
@@ -109,8 +118,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Create user
     const newUserResult = await pool.query(
-      'INSERT INTO users (username, email, password_hash, full_name) VALUES ($1, $2, $3, $4) RETURNING id, username, email, full_name, role, created_at, updated_at',
-      [username, email, passwordHash, full_name]
+      'INSERT INTO users (username, email, password_hash, full_name, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, full_name, role, created_at, updated_at',
+      [username, email, passwordHash, full_name, role]
     );
 
     const newUser = newUserResult.rows[0];

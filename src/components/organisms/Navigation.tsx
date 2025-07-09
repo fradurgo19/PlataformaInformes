@@ -33,11 +33,13 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
   const { state: authState, logout } = useAuth();
 
   const isAdmin = authState.user?.role === 'admin';
+  
   const navItems: NavItem[] = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/reports/new', label: 'New Report', icon: Plus },
   ];
+  
   if (isAdmin) {
     navItems.push(
       { path: '/admin', label: 'Administration', icon: Shield },

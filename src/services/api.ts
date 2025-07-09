@@ -73,7 +73,7 @@ class ApiService {
     }
   }
 
-  async register(userData: { username: string; email: string; password: string; full_name: string }): Promise<ApiResponse<User>> {
+  async register(userData: { username: string; email: string; password: string; full_name: string; role: string }): Promise<ApiResponse<User>> {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -403,14 +403,14 @@ class ApiService {
     }
   }
 
-  async getAllUsers(): Promise<ApiResponse<{ id: string; full_name: string }[]>> {
+  async getAllUsers(): Promise<ApiResponse<User[]>> {
     const response = await fetch(`${API_BASE_URL}/auth/users`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${this.getToken()}`,
       },
     });
-    return this.handleResponse(response);
+    return this.handleResponse<User[]>(response);
   }
 }
 

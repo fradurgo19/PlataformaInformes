@@ -16,7 +16,7 @@ export interface ComponentType {
 
 export type ComponentStatus = 'CORRECTED' | 'PENDING';
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'user' | 'viewer';
 
 export type ReportStatus = 'draft' | 'completed' | 'archived';
 

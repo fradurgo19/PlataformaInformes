@@ -9,6 +9,7 @@ import { Select } from '../components/atoms/Select';
 const roleOptions = [
   { value: 'admin', label: 'Administrador' },
   { value: 'user', label: 'Usuario' },
+  { value: 'viewer', label: 'Visualizador (Solo propios reportes)' },
 ];
 
 const initialForm = { full_name: '', username: '', email: '', password: '', role: 'user' };

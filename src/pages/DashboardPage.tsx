@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useReports } from '../hooks/useReports';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
-import { StatusBadge } from '../components/molecules/StatusBadge';
+
 import { LoadingSpinner } from '../components/molecules/LoadingSpinner';
 import { Button } from '../components/atoms/Button';
 import { Input } from '../components/atoms/Input';
@@ -14,10 +14,8 @@ import {
   Calendar, 
   Wrench,
   AlertCircle,
-  CheckCircle,
   Clock,
-  Filter,
-  Archive
+  Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportFilters, MachineType, ReportStatus, Report } from '../types';
@@ -51,13 +49,7 @@ export const DashboardPage: React.FC = () => {
     { value: 'GRADER', label: 'Grader' },
   ];
 
-  const statusOptions = [
-    { value: '', label: 'All Statuses' },
-    { value: 'DRAFT', label: 'Draft' },
-    { value: 'IN_PROGRESS', label: 'In Progress' },
-    { value: 'COMPLETED', label: 'Completed' },
-    { value: 'REVIEWED', label: 'Reviewed' },
-  ];
+
 
   const handleFilterChange = (key: keyof ReportFilters, value: string) => {
     setFilters(prev => ({
@@ -89,18 +81,7 @@ export const DashboardPage: React.FC = () => {
     setSelectedUserId('');
   };
 
-  const getStatusIcon = (status: ReportStatus) => {
-    switch (status) {
-      case 'draft':
-        return <Clock className="w-4 h-4" />;
-      case 'completed':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'archived':
-        return <Archive className="w-4 h-4" />;
-      default:
-        return <FileText className="w-4 h-4" />;
-    }
-  };
+
 
   const getPriorityCount = (reports: Report[]) => {
     const stats = { total: 0, high: 0, medium: 0 };
@@ -250,12 +231,7 @@ export const DashboardPage: React.FC = () => {
                 onChange={(e) => handleFilterChange('machineType', e.target.value)}
                 placeholder="Select machine type"
               />
-              <Select
-                options={statusOptions}
-                value={filters.status || ''}
-                onChange={(e) => handleFilterChange('status', e.target.value as ReportStatus)}
-                placeholder="Select status"
-              />
+
               <Select
                 options={[{ value: '', label: 'Todos los usuarios' }, ...users.map(u => ({ value: u.id, label: u.full_name }))]}
                 value={selectedUserId}
@@ -279,21 +255,12 @@ export const DashboardPage: React.FC = () => {
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Machine</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Serie</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Priority</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Usuario</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {reports.map((report) => {
-                  const highestPriority = report.components?.reduce((highest, comp) => {
-                    const priorities: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
-                    const currentPriority = priorities[comp.priority] || 0;
-                    const highestPriority = priorities[highest] || 0;
-                    return currentPriority > highestPriority ? comp.priority : highest;
-                  }, 'LOW') || 'LOW';
-
                   return (
                     <tr key={report.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="py-4 px-4">
@@ -311,22 +278,6 @@ export const DashboardPage: React.FC = () => {
                       <td className="py-4 px-4">{report.serial_number || 'N/A'}</td>
                       <td className="py-4 px-4">
                         <p className="text-slate-900">{report.report_date ? format(new Date(report.report_date), 'MMM dd, yyyy') : 'No Date'}</p>
-                      </td>
-                      <td className="py-4 px-4">
-                        <StatusBadge status={report.status} />
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          highestPriority === 'CRITICAL' 
-                            ? 'bg-red-100 text-red-800'
-                            : highestPriority === 'HIGH'
-                            ? 'bg-orange-100 text-orange-800'
-                            : highestPriority === 'MEDIUM'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {highestPriority}
-                        </span>
                       </td>
                       <td className="py-4 px-4">{report.user_full_name || 'N/A'}</td>
                       <td className="py-4 px-4">

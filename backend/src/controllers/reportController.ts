@@ -160,13 +160,13 @@ export const getReports = async (req: Request, res: Response) => {
     // Construir WHERE
     const whereClause = filterClauses.length ? 'WHERE ' + filterClauses.join(' AND ') : '';
 
-    // LIMIT y OFFSET siempre al final
-    params.push(limit, offset);
-    const limitIdx = params.length - 1;
-    const offsetIdx = params.length;
-
     // Construir countQuery correctamente
     if (userRole === 'admin') {
+      // LIMIT y OFFSET siempre al final
+      params.push(limit, offset);
+      const limitIdx = params.length - 1;
+      const offsetIdx = params.length;
+      
       query = `SELECT r.*, u.full_name as user_full_name 
                FROM reports r 
                JOIN users u ON r.user_id = u.id 
@@ -179,7 +179,35 @@ export const getReports = async (req: Request, res: Response) => {
       } else {
         countQuery = `SELECT COUNT(*) FROM reports r ${whereClause}`;
       }
+    } else if (userRole === 'viewer') {
+      // Los viewers solo ven sus propios reportes
+      filterClauses.push('r.user_id = $' + (params.length + 1));
+      params.push(userId);
+      const viewerWhereClause = filterClauses.length ? 'WHERE ' + filterClauses.join(' AND ') : '';
+      
+      // LIMIT y OFFSET siempre al final
+      params.push(limit, offset);
+      const limitIdx = params.length - 1;
+      const offsetIdx = params.length;
+      
+      query = `SELECT r.*, u.full_name as user_full_name 
+               FROM reports r 
+               JOIN users u ON r.user_id = u.id 
+               ${viewerWhereClause}
+               ORDER BY r.created_at DESC 
+               LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+      if (req.query.userFullName) {
+        countQuery = `SELECT COUNT(*) FROM reports r JOIN users u ON r.user_id = u.id ${viewerWhereClause}`;
+      } else {
+        countQuery = `SELECT COUNT(*) FROM reports r ${viewerWhereClause}`;
+      }
     } else {
+      // Usuarios regulares ven todos los reportes
+      // LIMIT y OFFSET siempre al final
+      params.push(limit, offset);
+      const limitIdx = params.length - 1;
+      const offsetIdx = params.length;
+      
       query = `SELECT r.*, u.full_name as user_full_name 
                FROM reports r 
                JOIN users u ON r.user_id = u.id 
@@ -197,9 +225,17 @@ export const getReports = async (req: Request, res: Response) => {
     console.log('Query:', query);
     console.log('Params:', params);
     const reportsResult = await pool.query(query, params);
+    
     // Solo pasar los parámetros de filtro a countQuery (sin limit/offset)
-    const filterParams = params.slice(0, params.length - 2);
-    const countResult = await pool.query(countQuery, filterParams.length > 0 ? filterParams : undefined);
+    let countParams;
+    if (userRole === 'viewer') {
+      // Para viewers, incluir el filtro de user_id pero sin limit/offset
+      countParams = params.slice(0, params.length - 2);
+    } else {
+      // Para admin y user, solo los parámetros de filtro
+      countParams = params.slice(0, params.length - 2);
+    }
+    const countResult = await pool.query(countQuery, countParams.length > 0 ? countParams : undefined);
     
     const totalCount = parseInt(countResult.rows[0].count);
     const totalPages = Math.ceil(totalCount / limit);
@@ -241,13 +277,24 @@ export const getReports = async (req: Request, res: Response) => {
 export const getReportById = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
     const reportId = req.params.id;
     
     // Get report with components, photos, and suggested parts
-    const reportResult = await pool.query(
-      `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1`,
-      [reportId]
-    );
+    let reportResult;
+    if (userRole === 'viewer') {
+      // Los viewers solo pueden ver sus propios reportes
+      reportResult = await pool.query(
+        `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1 AND r.user_id = $2`,
+        [reportId, userId]
+      );
+    } else {
+      // Admin y usuarios regulares pueden ver cualquier reporte
+      reportResult = await pool.query(
+        `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1`,
+        [reportId]
+      );
+    }
     
     if (reportResult.rows.length === 0) {
       res.status(404).json({
