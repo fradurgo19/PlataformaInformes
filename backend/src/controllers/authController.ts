@@ -162,3 +162,65 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     });
   }
 }; 
+
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { full_name, email, password } = req.body;
+
+    if (!full_name || !email) {
+      res.status(400).json({
+        success: false,
+        error: 'Full name and email are required'
+      });
+      return;
+    }
+
+    // Check if email is already used by another user
+    const emailCheck = await pool.query(
+      'SELECT id FROM users WHERE email = $1 AND id <> $2',
+      [email, userId]
+    );
+    if (emailCheck.rows.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Email is already in use by another user'
+      });
+      return;
+    }
+
+    let updateQuery = '';
+    let params: any[] = [];
+    if (password) {
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+      updateQuery = 'UPDATE users SET full_name = $1, email = $2, password_hash = $3, updated_at = NOW() WHERE id = $4 RETURNING id, username, email, full_name, role, created_at, updated_at';
+      params = [full_name, email, passwordHash, userId];
+    } else {
+      updateQuery = 'UPDATE users SET full_name = $1, email = $2, updated_at = NOW() WHERE id = $3 RETURNING id, username, email, full_name, role, created_at, updated_at';
+      params = [full_name, email, userId];
+    }
+
+    const result = await pool.query(updateQuery, params);
+    if (result.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
+    }
+
+    const response: ApiResponse<User> = {
+      success: true,
+      data: result.rows[0],
+      message: 'Profile updated successfully'
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+}; 
