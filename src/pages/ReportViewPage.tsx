@@ -194,14 +194,6 @@ export const ReportViewPage: React.FC = () => {
                   Edit
                 </Button>
               </Link>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteReport}
-                isLoading={deleteReportMutation.isPending}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
             </div>
           </div>
 

@@ -224,3 +224,15 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     });
   }
 }; 
+
+export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const usersResult = await pool.query(
+      'SELECT id, full_name, username, email, role, created_at, updated_at FROM users ORDER BY full_name ASC'
+    );
+    res.json({ success: true, data: usersResult.rows });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+}; 

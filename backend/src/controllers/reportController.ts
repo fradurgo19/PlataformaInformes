@@ -139,10 +139,6 @@ export const getReports = async (req: Request, res: Response) => {
     let params: any[] = [];
 
     // Filtros dinámicos
-    if (userRole !== 'admin') {
-      filterClauses.push('r.user_id = $' + (params.length + 1));
-      params.push(userId);
-    }
     if (req.query.machineType) {
       filterClauses.push('r.machine_type = $' + (params.length + 1));
       params.push(req.query.machineType);
@@ -231,8 +227,8 @@ export const getReportById = async (req: Request, res: Response): Promise<void> 
     
     // Get report with components, photos, and suggested parts
     const reportResult = await pool.query(
-      `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1 AND r.user_id = $2`,
-      [reportId, userId]
+      `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1`,
+      [reportId]
     );
     
     if (reportResult.rows.length === 0) {
@@ -472,8 +468,8 @@ export const downloadPDF = async (req: Request, res: Response): Promise<void> =>
     
     // Get report with all related data
     const reportResult = await pool.query(
-      `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1 AND r.user_id = $2`,
-      [reportId, userId]
+      `SELECT r.*, u.full_name as user_full_name FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = $1`,
+      [reportId]
     );
     
     if (reportResult.rows.length === 0) {

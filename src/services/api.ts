@@ -400,6 +400,16 @@ class ApiService {
       this.token = token;
     }
   }
+
+  async getAllUsers(): Promise<ApiResponse<{ id: string; full_name: string }[]>> {
+    const response = await fetch(`${API_BASE_URL}/auth/users`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.getToken()}`,
+      },
+    });
+    return this.handleResponse(response);
+  }
 }
 
 export const apiService = new ApiService();

@@ -91,6 +91,7 @@ export interface Report {
   updated_at: string;
   components?: Component[];
   suggested_parts?: SuggestedPart[];
+  user_full_name?: string; // <-- Agregado para dashboard
 }
 
 export interface ApiResponse<T = any> {

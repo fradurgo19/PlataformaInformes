@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReportFilters, MachineType, ReportStatus, Report } from '../types';
+import { apiService } from '../services/api';
 
 export const DashboardPage: React.FC = () => {
   const [filters, setFilters] = useState<ReportFilters>({});
@@ -28,6 +29,16 @@ export const DashboardPage: React.FC = () => {
   const [clientNameInput, setClientNameInput] = useState('');
   const [pendingClientName, setPendingClientName] = useState('');
   const { data: reportsData, isLoading, error } = useReports(filters);
+  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+
+  useEffect(() => {
+    apiService.getAllUsers().then(res => {
+      if (res.success && Array.isArray(res.data)) {
+        setUsers(res.data);
+      }
+    });
+  }, []);
 
   const machineTypeOptions = [
     { value: '', label: 'All Machine Types' },
@@ -62,10 +73,16 @@ export const DashboardPage: React.FC = () => {
     setClientNameInput(pendingClientName);
   };
 
+  const handleUserFilterChange = (userId: string) => {
+    setSelectedUserId(userId);
+    setFilters(prev => ({ ...prev, userId: userId || undefined }));
+  };
+
   const clearFilters = () => {
     setFilters({});
     setClientNameInput('');
     setPendingClientName('');
+    setSelectedUserId('');
   };
 
   const getStatusIcon = (status: ReportStatus) => {
@@ -86,7 +103,7 @@ export const DashboardPage: React.FC = () => {
     
     reports.forEach(report => {
       stats.total++;
-      if (report.components?.some(comp => comp.priority === 'HIGH' || comp.priority === 'CRITICAL')) {
+      if (report.components?.some(comp => comp.priority === 'HIGH')) {
         stats.high++;
       }
       if (report.components?.some(comp => comp.priority === 'MEDIUM')) {
@@ -211,7 +228,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
               <Input
                 placeholder="Search client name..."
                 value={pendingClientName}
@@ -221,7 +238,7 @@ export const DashboardPage: React.FC = () => {
               <Select
                 options={machineTypeOptions}
                 value={filters.machineType || ''}
-                onChange={(e) => handleFilterChange('machineType', e.target.value as MachineType)}
+                onChange={(e) => handleFilterChange('machineType', e.target.value)}
                 placeholder="Select machine type"
               />
               <Select
@@ -230,7 +247,13 @@ export const DashboardPage: React.FC = () => {
                 onChange={(e) => handleFilterChange('status', e.target.value as ReportStatus)}
                 placeholder="Select status"
               />
-              <div className="md:col-span-3 flex justify-end">
+              <Select
+                options={[{ value: '', label: 'Todos los usuarios' }, ...users.map(u => ({ value: u.id, label: u.full_name }))]}
+                value={selectedUserId}
+                onChange={e => handleUserFilterChange(e.target.value)}
+                placeholder="Filtrar por usuario"
+              />
+              <div className="md:col-span-4 flex justify-end">
                 <Button variant="outline" size="sm" onClick={clearFilters}>
                   Clear Filters
                 </Button>
@@ -248,6 +271,7 @@ export const DashboardPage: React.FC = () => {
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Date</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Priority</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Usuario</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
                 </tr>
               </thead>
@@ -293,6 +317,7 @@ export const DashboardPage: React.FC = () => {
                           {highestPriority}
                         </span>
                       </td>
+                      <td className="py-4 px-4">{report.user_full_name || 'N/A'}</td>
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-2">
                           <Link to={`/reports/${report.id}`}>

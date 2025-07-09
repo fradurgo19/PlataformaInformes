@@ -15,6 +15,14 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
+// Defino el tipo para los items de navegación
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.ElementType;
+  children?: NavItem[];
+}
+
 interface NavigationProps {
   isOpen?: boolean;
   onToggle?: () => void;
@@ -24,15 +32,17 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
   const { state: authState, logout } = useAuth();
 
-  const navItems = [
+  const isAdmin = authState.user?.role === 'admin';
+  const navItems: NavItem[] = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/reports/new', label: 'New Report', icon: Plus },
   ];
-
-  // Add admin link if user is admin
-  if (authState.user?.role === 'admin') {
-    navItems.push({ path: '/admin', label: 'Administration', icon: Shield });
+  if (isAdmin) {
+    navItems.push(
+      { path: '/admin', label: 'Administration', icon: Shield },
+      { path: '/admin/users', label: 'Usuarios', icon: User }
+    );
   }
 
   const isActivePath = (path: string) => {
@@ -81,7 +91,37 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = isActivePath(item.path);
-
+              if (item.children) {
+                return (
+                  <div key={item.path}>
+                    <div className={cn(
+                      'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                      isActive ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                    )}>
+                      <Icon className="w-5 h-5 mr-3" />
+                      {item.label}
+                    </div>
+                    <div className="ml-8 mt-1 space-y-1">
+                      {item.children.map((child: NavItem) => (
+                        <Link
+                          key={child.path}
+                          to={child.path}
+                          onClick={onToggle}
+                          className={cn(
+                            'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                            isActivePath(child.path)
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                          )}
+                        >
+                          <child.icon className="w-4 h-4 mr-2" />
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={item.path}

@@ -11,5 +11,6 @@ router.post('/register', register as any);
 // Protected routes
 router.get('/profile', authenticateToken as any, getProfile as any);
 router.put('/profile', authenticateToken as any, require('../controllers/authController').updateProfile as any);
+router.get('/users', authenticateToken as any, require('../controllers/authController').getAllUsers as any);
 
 export default router; 

@@ -14,6 +14,7 @@ import { ReportViewPage } from './pages/ReportViewPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
+import { UsersAdminPage } from './pages/UsersAdminPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -103,6 +104,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <AdminPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute>
+            <UsersAdminPage />
           </ProtectedRoute>
         }
       />
