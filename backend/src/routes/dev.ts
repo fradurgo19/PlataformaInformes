@@ -11,7 +11,7 @@ router.use((req, res, next) => {
       error: 'Route not found'
     });
   }
-  next();
+  return next();
 });
 
 // Resetear rate limiting (solo en desarrollo)
@@ -19,7 +19,7 @@ router.post('/reset-rate-limit', (req, res) => {
   try {
     // Limpiar el rate limiting reiniciando el servidor
     // En una implementación más robusta, podrías usar Redis o similar
-    res.json({
+    return res.json({
       success: true,
       message: 'Rate limiting reset. Please restart the server for changes to take effect.'
     });
