@@ -5,11 +5,17 @@ import morgan from 'morgan';
 import path from 'path';
 import dotenv from 'dotenv';
 
+// Import middleware
+import { generalLimiter, authLimiter, uploadLimiter } from './middleware/rateLimit';
+import { sanitizeAll } from './middleware/sanitization';
+import metricsCollector from './utils/metrics';
+
 // Import routes
 import authRoutes from './routes/auth';
 import reportRoutes from './routes/reports';
 import machineTypeRoutes from './routes/machineTypes';
 import componentTypeRoutes from './routes/componentTypes';
+import alertRoutes from './routes/alerts';
 
 // Load environment variables from backend directory
 dotenv.config();
@@ -47,6 +53,12 @@ app.use(cors({
   credentials: true
 }));
 
+// Rate limiting middleware
+app.use(generalLimiter);
+
+// Metrics collection middleware
+app.use(metricsCollector.collectMetrics.bind(metricsCollector));
+
 // Logging middleware
 app.use(morgan('combined'));
 
@@ -60,6 +72,9 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Sanitization middleware
+app.use(sanitizeAll);
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -72,11 +87,20 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
+// Metrics endpoint
+app.get('/metrics', (req, res) => {
+  res.json({
+    success: true,
+    data: metricsCollector.getMetrics()
+  });
+});
+
+// API routes with specific rate limiting
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/machine-types', machineTypeRoutes);
 app.use('/api/component-types', componentTypeRoutes);
+app.use('/api/alerts', alertRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

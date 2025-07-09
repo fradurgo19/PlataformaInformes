@@ -77,12 +77,6 @@ export const LoginPage: React.FC = () => {
             Register
           </button>
         </div>
-
-        <div className="text-center text-sm text-slate-600">
-          <p>Demo credentials:</p>
-          <p className="font-medium">Username: admin</p>
-          <p className="font-medium">Password: admin123</p>
-        </div>
       </form>
     </AuthLayout>
   );

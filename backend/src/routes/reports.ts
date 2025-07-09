@@ -11,6 +11,7 @@ import {
 } from '../controllers/reportController';
 import { authenticateToken } from '../middleware/auth';
 import { upload, handleUploadError } from '../middleware/upload';
+import { validateFileUpload } from '../middleware/fileValidation';
 
 const router = Router();
 
@@ -18,10 +19,10 @@ const router = Router();
 router.use(authenticateToken as any);
 
 // Report routes
-router.post('/', upload.any(), handleUploadError, createReport as any);
+router.post('/', upload.any(), handleUploadError, validateFileUpload, createReport as any);
 router.get('/', getReports as any);
 router.get('/:id', getReportById as any);
-router.put('/:id', upload.any(), handleUploadError, updateReport as any);
+router.put('/:id', upload.any(), handleUploadError, validateFileUpload, updateReport as any);
 router.delete('/:id', deleteReport as any);
 
 // PDF and Email routes
@@ -30,7 +31,7 @@ router.post('/:id/email', sendReportEmail as any);
 router.get('/test/email', testEmailService as any);
 
 // File upload route
-router.post('/upload', upload.array('photos', 10), handleUploadError, (req: any, res: any) => {
+router.post('/upload', upload.array('photos', 10), handleUploadError, validateFileUpload, (req: any, res: any) => {
   try {
     const files = req.files as Express.Multer.File[];
     
