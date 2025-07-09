@@ -501,6 +501,7 @@ export const downloadPDF = async (req: Request, res: Response): Promise<void> =>
         );
         return {
           ...component,
+          parameters: component.parameters ? JSON.parse(component.parameters) : [],
           photos: photosResult.rows
         };
       })
@@ -585,6 +586,7 @@ export const sendReportEmail = async (req: Request, res: Response): Promise<void
         );
         return {
           ...component,
+          parameters: component.parameters ? JSON.parse(component.parameters) : [],
           photos: photosResult.rows
         };
       })

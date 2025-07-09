@@ -47,7 +47,35 @@ export class PDFService {
         <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
           <p><strong>Hallazgos:</strong> ${component.findings}</p>
-          ${component.parameters ? `<p><strong>Parámetros:</strong> ${component.parameters}</p>` : ''}
+          ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
+  <div style="margin: 10px 0;">
+    <strong>Parámetros / Parameters:</strong>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px;">
+      <thead>
+        <tr style="background: #f1f5f9;">
+          <th style="border: 1px solid #ccc; padding: 4px;">Nombre / Name</th>
+          <th style="border: 1px solid #ccc; padding: 4px;">Valor Mín / Min Value</th>
+          <th style="border: 1px solid #ccc; padding: 4px;">Valor Máx / Max Value</th>
+          <th style="border: 1px solid #ccc; padding: 4px;">Valor Medido / Measured Value</th>
+          <th style="border: 1px solid #ccc; padding: 4px;">Corregido / Corrected</th>
+          <th style="border: 1px solid #ccc; padding: 4px;">Observación / Observation</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${component.parameters.map((param: any) => `
+          <tr>
+            <td style="border: 1px solid #ccc; padding: 4px;">${param.name ?? ''}</td>
+            <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">${param.minValue ?? ''}</td>
+            <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">${param.maxValue ?? ''}</td>
+            <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">${param.measuredValue ?? ''}</td>
+            <td style="border: 1px solid #ccc; padding: 4px; text-align: center;">${param.corrected ? 'Sí / Yes' : 'No'}</td>
+            <td style="border: 1px solid #ccc; padding: 4px;">${param.observation ?? ''}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+` : ''}
           <p><strong>Estado:</strong> <span style="color: ${component.status === 'CORRECTED' ? 'green' : 'orange'}; font-weight: bold;">${component.status}</span></p>
           <p><strong>Prioridad:</strong> <span style="color: ${component.priority === 'HIGH' ? 'red' : component.priority === 'MEDIUM' ? 'orange' : 'green'}; font-weight: bold;">${component.priority}</span></p>
           ${component.suggestions ? `<p><strong>Sugerencias:</strong> ${component.suggestions}</p>` : ''}
