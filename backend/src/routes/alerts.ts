@@ -12,12 +12,12 @@ router.use(requireRole(['admin']) as any);
 router.get('/active', (req, res) => {
   try {
     const alerts = alertManager.getActiveAlerts();
-    res.json({
+    return res.json({
       success: true,
       data: alerts
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
@@ -28,12 +28,12 @@ router.get('/active', (req, res) => {
 router.get('/', (req, res) => {
   try {
     const alerts = alertManager.getAllAlerts();
-    res.json({
+    return res.json({
       success: true,
       data: alerts
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
@@ -44,12 +44,12 @@ router.get('/', (req, res) => {
 router.get('/stats', (req, res) => {
   try {
     const stats = alertManager.getAlertStats();
-    res.json({
+    return res.json({
       success: true,
       data: stats
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
@@ -73,18 +73,18 @@ router.put('/:id/acknowledge', (req, res) => {
     const success = alertManager.acknowledgeAlert(id, acknowledgedBy);
     
     if (success) {
-      res.json({
+      return res.json({
         success: true,
         message: 'Alert acknowledged successfully'
       });
     } else {
-      res.status(404).json({
+      return res.status(404).json({
         success: false,
         error: 'Alert not found'
       });
     }
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
@@ -95,12 +95,12 @@ router.put('/:id/acknowledge', (req, res) => {
 router.delete('/cleanup', (req, res) => {
   try {
     alertManager.cleanupOldAlerts();
-    res.json({
+    return res.json({
       success: true,
       message: 'Old alerts cleaned up successfully'
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
