@@ -46,7 +46,7 @@ export class PDFService {
       return `
         <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
-          <p><strong>Hallazgos:</strong> ${component.findings}</p>
+          <p><strong>Hallazgos / Findings:</strong> ${component.findings}</p>
           ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
   <div style="margin: 10px 0;">
     <strong>Parámetros / Parameters:</strong>
@@ -76,10 +76,10 @@ export class PDFService {
     </table>
   </div>
 ` : ''}
-          <p><strong>Estado:</strong> <span style="color: ${component.status === 'CORRECTED' ? 'green' : 'orange'}; font-weight: bold;">${component.status}</span></p>
-          <p><strong>Prioridad:</strong> <span style="color: ${component.priority === 'HIGH' ? 'red' : component.priority === 'MEDIUM' ? 'orange' : 'green'}; font-weight: bold;">${component.priority}</span></p>
-          ${component.suggestions ? `<p><strong>Sugerencias:</strong> ${component.suggestions}</p>` : ''}
-          ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos:</strong><br>${photosHTML}</div>` : ''}
+          <p><strong>Estado / Status:</strong> <span style="color: ${component.status === 'CORRECTED' ? 'green' : 'orange'}; font-weight: bold;">${component.status}</span></p>
+          <p><strong>Prioridad / Priority:</strong> <span style="color: ${component.priority === 'HIGH' ? 'red' : component.priority === 'MEDIUM' ? 'orange' : 'green'}; font-weight: bold;">${component.priority}</span></p>
+          ${component.suggestions ? `<p><strong>Sugerencias / Suggestions:</strong> ${component.suggestions}</p>` : ''}
+          ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos / Photos:</strong><br>${photosHTML}</div>` : ''}
         </div>
       `;
     });
@@ -89,9 +89,9 @@ export class PDFService {
 
     const suggestedPartsHTML = suggestedParts.map(part => `
       <div style="margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 5px; page-break-inside: avoid;">
-        <p><strong>Parte:</strong> ${part.part_number}</p>
-        <p><strong>Descripción:</strong> ${part.description}</p>
-        <p><strong>Cantidad:</strong> ${part.quantity}</p>
+        <p><strong>Parte / Part:</strong> ${part.part_number}</p>
+        <p><strong>Descripción / Description:</strong> ${part.description}</p>
+        <p><strong>Cantidad / Quantity:</strong> ${part.quantity}</p>
       </div>
     `).join('');
 
@@ -123,7 +123,7 @@ export class PDFService {
           <img class="logo-img" src="${logoBase64}" alt="Company Logo" />
         </div>
         <div class="header">
-          <h1>🏗️ Reporte de Inspección de Maquinaria / Machinery Inspection Report</h1>
+          <h1>Reporte de Inspección de Maquinaria / Machinery Inspection Report</h1>
           <p><strong>Cliente / Client:</strong> ${report.client_name}</p>
           <p><strong>Fecha del Reporte / Report Date:</strong> ${new Date(report.report_date).toLocaleDateString('es-ES')}</p>
         </div>
