@@ -108,8 +108,10 @@ class ApiService {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.machineType) params.append('machineType', filters.machineType);
     if (filters?.clientName) params.append('clientName', filters.clientName);
+    if (filters?.userFullName) params.append('userFullName', filters.userFullName);
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.serialNumber) params.append('serialNumber', filters.serialNumber);
 
     const response = await fetch(`${API_BASE_URL}/reports?${params}`, {
       method: 'GET',

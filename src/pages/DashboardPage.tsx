@@ -28,6 +28,7 @@ export const DashboardPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [clientNameInput, setClientNameInput] = useState('');
   const [pendingClientName, setPendingClientName] = useState('');
+  const [serialNumberInput, setSerialNumberInput] = useState('');
   const { data: reportsData, isLoading, error } = useReports(filters);
   const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -69,19 +70,22 @@ export const DashboardPage: React.FC = () => {
     setFilters(prev => ({
       ...prev,
       clientName: pendingClientName || undefined,
+      serialNumber: serialNumberInput || undefined,
     }));
     setClientNameInput(pendingClientName);
   };
 
   const handleUserFilterChange = (userId: string) => {
     setSelectedUserId(userId);
-    setFilters(prev => ({ ...prev, userId: userId || undefined }));
+    const user = users.find(u => u.id === userId);
+    setFilters(prev => ({ ...prev, userFullName: user ? user.full_name : undefined }));
   };
 
   const clearFilters = () => {
     setFilters({});
     setClientNameInput('');
     setPendingClientName('');
+    setSerialNumberInput('');
     setSelectedUserId('');
   };
 
@@ -228,11 +232,16 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
               <Input
                 placeholder="Search client name..."
                 value={pendingClientName}
                 onChange={(e) => setPendingClientName(e.target.value)}
+              />
+              <Input
+                placeholder="Buscar por serie..."
+                value={serialNumberInput}
+                onChange={e => setSerialNumberInput(e.target.value)}
               />
               <Button variant="outline" size="sm" onClick={handleSearch} className="ml-2">Buscar</Button>
               <Select
@@ -253,7 +262,7 @@ export const DashboardPage: React.FC = () => {
                 onChange={e => handleUserFilterChange(e.target.value)}
                 placeholder="Filtrar por usuario"
               />
-              <div className="md:col-span-4 flex justify-end">
+              <div className="md:col-span-5 flex justify-end">
                 <Button variant="outline" size="sm" onClick={clearFilters}>
                   Clear Filters
                 </Button>
@@ -268,6 +277,7 @@ export const DashboardPage: React.FC = () => {
                 <tr className="border-b border-slate-200">
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Client</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Machine</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Serie</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Date</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Priority</th>
@@ -298,6 +308,7 @@ export const DashboardPage: React.FC = () => {
                           <p className="text-sm text-slate-600">{report.model || 'N/A'}</p>
                         </div>
                       </td>
+                      <td className="py-4 px-4">{report.serial_number || 'N/A'}</td>
                       <td className="py-4 px-4">
                         <p className="text-slate-900">{report.report_date ? format(new Date(report.report_date), 'MMM dd, yyyy') : 'No Date'}</p>
                       </td>

@@ -148,6 +148,14 @@ export const getReports = async (req: Request, res: Response) => {
       filterClauses.push('LOWER(r.client_name) LIKE $' + (params.length + 1));
       params.push(`%${String(clientName).toLowerCase()}%`);
     }
+    if (req.query.userFullName) {
+      filterClauses.push('LOWER(u.full_name) LIKE $' + (params.length + 1));
+      params.push(`%${String(req.query.userFullName).toLowerCase()}%`);
+    }
+    if (req.query.serialNumber) {
+      filterClauses.push('LOWER(r.serial_number) LIKE $' + (params.length + 1));
+      params.push(`%${String(req.query.serialNumber).toLowerCase()}%`);
+    }
 
     // Construir WHERE
     const whereClause = filterClauses.length ? 'WHERE ' + filterClauses.join(' AND ') : '';
@@ -157,6 +165,7 @@ export const getReports = async (req: Request, res: Response) => {
     const limitIdx = params.length - 1;
     const offsetIdx = params.length;
 
+    // Construir countQuery correctamente
     if (userRole === 'admin') {
       query = `SELECT r.*, u.full_name as user_full_name 
                FROM reports r 
@@ -164,7 +173,12 @@ export const getReports = async (req: Request, res: Response) => {
                ${whereClause}
                ORDER BY r.created_at DESC 
                LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-      countQuery = `SELECT COUNT(*) FROM reports r ${whereClause}`;
+      // Si hay filtro por userFullName, el JOIN debe estar en countQuery
+      if (req.query.userFullName) {
+        countQuery = `SELECT COUNT(*) FROM reports r JOIN users u ON r.user_id = u.id ${whereClause}`;
+      } else {
+        countQuery = `SELECT COUNT(*) FROM reports r ${whereClause}`;
+      }
     } else {
       query = `SELECT r.*, u.full_name as user_full_name 
                FROM reports r 
@@ -172,7 +186,11 @@ export const getReports = async (req: Request, res: Response) => {
                ${whereClause}
                ORDER BY r.created_at DESC 
                LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-      countQuery = `SELECT COUNT(*) FROM reports r ${whereClause}`;
+      if (req.query.userFullName) {
+        countQuery = `SELECT COUNT(*) FROM reports r JOIN users u ON r.user_id = u.id ${whereClause}`;
+      } else {
+        countQuery = `SELECT COUNT(*) FROM reports r ${whereClause}`;
+      }
     }
     
     console.log('--- SQL DEBUG ---');

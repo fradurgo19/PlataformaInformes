@@ -113,6 +113,8 @@ export interface ReportFilters {
   status?: ReportStatus;
   machineType?: string; // MachineType name
   clientName?: string;
+  userFullName?: string;
+  serialNumber?: string;
   page?: number;
   limit?: number;
 }
