@@ -1,9 +1,15 @@
 import rateLimit from 'express-rate-limit';
+import { Request, Response, NextFunction } from 'express';
+
+// Middleware que no limita nada (solo en desarrollo)
+const noLimit = (req: Request, res: Response, next: NextFunction) => next();
+
+const isDev = process.env.NODE_ENV === 'development';
 
 // Rate limiter general para todas las rutas
-export const generalLimiter = rateLimit({
+export const generalLimiter = isDev ? noLimit : rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutos por defecto
-  max: process.env.NODE_ENV === 'development' ? 1000 : parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // más permisivo en desarrollo
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
@@ -13,9 +19,9 @@ export const generalLimiter = rateLimit({
 });
 
 // Rate limiter específico para autenticación
-export const authLimiter = rateLimit({
+export const authLimiter = isDev ? noLimit : rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'development' ? 50 : 5, // más permisivo en desarrollo
+  max: 5,
   message: {
     success: false,
     error: 'Too many login attempts, please try again later.'
@@ -25,7 +31,7 @@ export const authLimiter = rateLimit({
 });
 
 // Rate limiter para subida de archivos
-export const uploadLimiter = rateLimit({
+export const uploadLimiter = isDev ? noLimit : rateLimit({
   windowMs: 60 * 1000, // 1 minuto
   max: 10, // máximo 10 uploads por minuto
   message: {
