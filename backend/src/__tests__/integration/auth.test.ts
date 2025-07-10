@@ -1,6 +1,6 @@
 import request from 'supertest';
 import app from '../../index';
-import { pool } from '../../config/database';
+import pool from '../../config/database';
 
 describe('Auth Integration Tests', () => {
   beforeAll(async () => {
