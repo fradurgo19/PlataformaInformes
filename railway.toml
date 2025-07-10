@@ -1,0 +1,19 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "backend"
+sourceDir = "backend"
+startCommand = "npm start"
+
+[[services]]
+name = "frontend"
+sourceDir = "."
+startCommand = "npm run build && npm run preview" 

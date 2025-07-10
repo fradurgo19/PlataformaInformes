@@ -30,6 +30,7 @@ export const DashboardPage: React.FC = () => {
   const { data: reportsData, isLoading, error } = useReports(filters);
   const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [machineTypes, setMachineTypes] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     apiService.getAllUsers().then(res => {
@@ -37,19 +38,14 @@ export const DashboardPage: React.FC = () => {
         setUsers(res.data);
       }
     });
+    // Obtener tipos de máquina dinámicamente
+    apiService.getMachineTypes().then(res => {
+      if (res.success && Array.isArray(res.data)) {
+        const options = res.data.map((mt: any) => ({ value: mt.name.toUpperCase(), label: mt.name.charAt(0).toUpperCase() + mt.name.slice(1).toLowerCase() }));
+        setMachineTypes([{ value: '', label: 'All Machine Types' }, ...options]);
+      }
+    });
   }, []);
-
-  const machineTypeOptions = [
-    { value: '', label: 'All Machine Types' },
-    { value: 'EXCAVATOR', label: 'Excavator' },
-    { value: 'BULLDOZER', label: 'Bulldozer' },
-    { value: 'LOADER', label: 'Loader' },
-    { value: 'CRANE', label: 'Crane' },
-    { value: 'COMPACTOR', label: 'Compactor' },
-    { value: 'GRADER', label: 'Grader' },
-  ];
-
-
 
   const handleFilterChange = (key: keyof ReportFilters, value: string) => {
     setFilters(prev => ({
@@ -226,7 +222,7 @@ export const DashboardPage: React.FC = () => {
               />
               <Button variant="outline" size="sm" onClick={handleSearch} className="ml-2">Buscar</Button>
               <Select
-                options={machineTypeOptions}
+                options={machineTypes}
                 value={filters.machineType || ''}
                 onChange={(e) => handleFilterChange('machineType', e.target.value)}
                 placeholder="Select machine type"

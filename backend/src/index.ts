@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -18,8 +19,8 @@ import componentTypeRoutes from './routes/componentTypes';
 import alertRoutes from './routes/alerts';
 import devRoutes from './routes/dev';
 
-// Load environment variables from backend directory
-dotenv.config();
+
+console.log('NODE_ENV:', process.env.NODE_ENV); // <-- Diagnóstico
 
 const app = express();
 const PORT = process.env.PORT || 3001;
