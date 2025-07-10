@@ -140,8 +140,8 @@ export const getReports = async (req: Request, res: Response) => {
 
     // Filtros dinámicos
     if (req.query.machineType) {
-      filterClauses.push('r.machine_type = $' + (params.length + 1));
-      params.push(req.query.machineType);
+      filterClauses.push('LOWER(r.machine_type) = $' + (params.length + 1));
+      params.push(String(req.query.machineType).toLowerCase());
     }
     if (req.query.clientName) {
       const clientName = Array.isArray(req.query.clientName) ? req.query.clientName[0] : req.query.clientName;
