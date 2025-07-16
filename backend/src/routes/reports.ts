@@ -9,7 +9,7 @@ import {
   sendReportEmail,
   testEmailService
 } from '../controllers/reportController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireRole } from '../middleware/auth';
 import { upload, handleUploadError } from '../middleware/upload';
 import { validateFileUpload } from '../middleware/fileValidation';
 
@@ -26,7 +26,7 @@ router.put('/:id', upload.any(), handleUploadError, validateFileUpload, updateRe
 router.delete('/:id', deleteReport as any);
 
 // PDF and Email routes
-router.get('/:id/pdf', downloadPDF as any);
+router.get('/:id/pdf', requireRole(['admin', 'user']), downloadPDF as any);
 router.post('/:id/email', sendReportEmail as any);
 router.get('/test/email', testEmailService as any);
 

@@ -45,13 +45,6 @@ export const requireRole = (roles: string[]) => {
       return;
     }
 
-    // En desarrollo, permitir acceso a cualquier usuario autenticado
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[DEV] Bypassing role check for user: ${req.user.username} (role: ${req.user.role})`);
-      next();
-      return;
-    }
-
     if (!roles.includes(req.user.role)) {
       res.status(403).json({ 
         success: false, 
