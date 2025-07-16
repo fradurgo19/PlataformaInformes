@@ -7,7 +7,8 @@ import {
   deleteReport,
   downloadPDF,
   sendReportEmail,
-  testEmailService
+  testEmailService,
+  closeReport
 } from '../controllers/reportController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { upload, handleUploadError } from '../middleware/upload';
@@ -29,6 +30,9 @@ router.delete('/:id', deleteReport as any);
 router.get('/:id/pdf', requireRole(['admin', 'user']), downloadPDF as any);
 router.post('/:id/email', sendReportEmail as any);
 router.get('/test/email', testEmailService as any);
+
+// Endpoint para cerrar el reporte
+router.patch('/:id/close', requireRole(['admin', 'user']), closeReport as any);
 
 // File upload route
 router.post('/upload', upload.array('photos', 10), handleUploadError, validateFileUpload, (req: any, res: any) => {

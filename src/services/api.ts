@@ -112,6 +112,7 @@ class ApiService {
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.serialNumber) params.append('serialNumber', filters.serialNumber);
+    if (filters?.general_status) params.append('general_status', filters.general_status);
 
     const response = await fetch(`${API_BASE_URL}/reports?${params}`, {
       method: 'GET',
@@ -193,6 +194,15 @@ class ApiService {
     });
 
     return this.handleResponse<boolean>(response);
+  }
+
+  // Cerrar reporte
+  async closeReport(id: string): Promise<ApiResponse<Report>> {
+    const response = await fetch(`${API_BASE_URL}/reports/${id}/close`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<Report>(response);
   }
 
   // File upload method

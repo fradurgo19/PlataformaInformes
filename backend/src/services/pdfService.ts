@@ -161,7 +161,7 @@ export class PDFService {
             </div>
             <div class="info-item">
               <strong>Estado / Status:</strong><br>
-              <span class="status-badge status-${report.status}">${report.status.toUpperCase()}</span>
+              <span class="status-badge" style="background-color: ${report.general_status === 'CLOSED' ? '#fee2e2' : '#fef9c3'}; color: ${report.general_status === 'CLOSED' ? '#b91c1c' : '#92400e'};">${report.general_status ? report.general_status.toUpperCase() : 'N/A'}</span>
             </div>
           </div>
         </div>

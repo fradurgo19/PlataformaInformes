@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateReportPDF } from '../utils/pdf';
+import { useAuth } from '../context/AuthContext';
+import { apiService } from '../services/api';
 
 // ErrorBoundary local para capturar errores de renderizado
 class LocalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
@@ -66,6 +68,8 @@ export const ReportViewPage: React.FC = () => {
   const { data: reportResponse, isLoading, error } = useReport(id!);
   const deleteReportMutation = useDeleteReport();
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const { state: authState } = useAuth();
+  const [isClosing, setIsClosing] = useState(false);
 
   const handleDownloadPDF = async () => {
     if (reportResponse?.data) {
@@ -96,6 +100,25 @@ export const ReportViewPage: React.FC = () => {
   const handleError = (error: string) => {
     setNotification({ type: 'error', message: error });
     setTimeout(() => setNotification(null), 5000);
+  };
+
+  // Handler para cerrar reporte
+  const handleCloseReport = async () => {
+    if (!id || !reportResponse?.data) return;
+    setIsClosing(true);
+    try {
+      const res = await apiService.closeReport(id);
+      if (res.success && res.data) {
+        reportResponse.data.general_status = 'CLOSED'; // Actualiza localmente
+        handleSuccess('Reporte cerrado exitosamente.');
+      } else {
+        handleError(res.error || 'No se pudo cerrar el reporte.');
+      }
+    } catch (err: any) {
+      handleError(err.message || 'Error al cerrar el reporte.');
+    } finally {
+      setIsClosing(false);
+    }
   };
 
   if (isLoading) {
@@ -187,9 +210,27 @@ export const ReportViewPage: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <StatusBadge status={report.status} />
+              {/* Badge para estado general */}
+              <span className={`px-2 py-1 rounded text-xs font-semibold ml-2 ${
+                report.general_status === 'CLOSED'
+                  ? 'bg-red-100 text-red-700 border border-red-200'
+                  : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+              }`}>
+                {report.general_status === 'CLOSED' ? 'CLOSED' : 'PENDING'}
+              </span>
+              {/* Botón para cerrar reporte: solo si es el creador y está pendiente */}
+              {report.general_status === 'PENDING' && authState.user?.id === report.user_id && (
+                <Button
+                  variant="destructive"
+                  onClick={handleCloseReport}
+                  disabled={isClosing}
+                  className="ml-2"
+                >
+                  {isClosing ? 'Closing...' : 'Close report'}
+                </Button>
+              )}
               <Link to={`/reports/${report.id}/edit`}>
-                <Button variant="outline">
+                <Button variant="outline" disabled={report.general_status === 'CLOSED'}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </Button>

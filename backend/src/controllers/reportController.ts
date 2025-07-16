@@ -27,8 +27,8 @@ export const createReport = async (req: Request, res: Response) => {
     const reportResult = await client.query(
       `INSERT INTO reports (
         user_id, client_name, machine_type, model, serial_number, 
-        hourmeter, report_date, ott, conclusions, overall_suggestions
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+        hourmeter, report_date, ott, conclusions, overall_suggestions, general_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
       RETURNING *`,
       [
         userId,
@@ -40,7 +40,8 @@ export const createReport = async (req: Request, res: Response) => {
         reportData.report_date,
         reportData.ott,
         reportData.conclusions || null,
-        reportData.overall_suggestions || null
+        reportData.overall_suggestions || null,
+        reportData.general_status || 'PENDING'
       ]
     );
     
@@ -155,6 +156,10 @@ export const getReports = async (req: Request, res: Response) => {
     if (req.query.serialNumber) {
       filterClauses.push('LOWER(r.serial_number) LIKE $' + (params.length + 1));
       params.push(`%${String(req.query.serialNumber).toLowerCase()}%`);
+    }
+    if (req.query.general_status) {
+      filterClauses.push('r.general_status = $' + (params.length + 1));
+      params.push(req.query.general_status);
     }
 
     // Construir WHERE
@@ -363,9 +368,19 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
   const client = await pool.connect();
   
   try {
+    const reportId = req.params.id;
+    // Verificar estado actual
+    const { rows } = await client.query('SELECT general_status FROM reports WHERE id = $1', [reportId]);
+    if (!rows[0]) {
+      res.status(404).json({ success: false, error: 'Report not found' });
+      return;
+    }
+    if (rows[0].general_status === 'CLOSED') {
+      res.status(403).json({ success: false, error: 'Report is CLOSED and cannot be edited' });
+      return;
+    }
     await client.query('BEGIN');
     
-    const { id } = req.params; // Report ID
     const userId = (req as any).user.id;
     const reportDataRaw = req.body.reportData;
     if (!reportDataRaw) {
@@ -384,13 +399,13 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
       `UPDATE reports SET 
         client_name = $1, machine_type = $2, model = $3, serial_number = $4,
         hourmeter = $5, report_date = $6, ott = $7, conclusions = $8,
-        overall_suggestions = $9, status = $10
-      WHERE id = $11 AND user_id = $12 RETURNING *`,
+        overall_suggestions = $9, status = $10, general_status = COALESCE($11, general_status)
+      WHERE id = $12 AND user_id = $13 RETURNING *`,
       [
         reportData.client_name, reportData.machine_type, reportData.model,
         reportData.serial_number, reportData.hourmeter, reportData.report_date,
         reportData.ott, reportData.conclusions, reportData.overall_suggestions,
-        reportData.status, id, userId,
+        reportData.status, reportData.general_status, reportId, userId,
       ]
     );
 
@@ -403,9 +418,8 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
     const feComponentIds = feComponents.map((c: any) => c.id).filter(Boolean);
 
     // Delete components that are no longer in the frontend
-    await client.query(
-      `DELETE FROM components WHERE report_id = $1 AND id NOT IN (SELECT unnest($2::uuid[]))`,
-      [id, feComponentIds]
+    await client.query('DELETE FROM components WHERE report_id = $1 AND id NOT IN (SELECT unnest($2::uuid[]))',
+      [reportId, feComponentIds]
     );
     
     for (const [index, componentData] of feComponents.entries()) {
@@ -424,7 +438,7 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
         const newCompResult = await client.query(
           `INSERT INTO components (report_id, type, findings, parameters, status, suggestions, priority)
            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-          [id, componentData.type, componentData.findings, componentData.parameters ? JSON.stringify(componentData.parameters) : null, componentData.status, componentData.suggestions, componentData.priority]
+          [reportId, componentData.type, componentData.findings, componentData.parameters ? JSON.stringify(componentData.parameters) : null, componentData.status, componentData.suggestions, componentData.priority]
         );
         componentId = newCompResult.rows[0].id;
       }
@@ -451,13 +465,13 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
     }
 
     // --- Suggested Parts Synchronization (simple delete and recreate) ---
-    await client.query('DELETE FROM suggested_parts WHERE report_id = $1', [id]);
+    await client.query('DELETE FROM suggested_parts WHERE report_id = $1', [reportId]);
     if (reportData.suggested_parts && reportData.suggested_parts.length > 0) {
       for (const part of reportData.suggested_parts) {
         await client.query(
           `INSERT INTO suggested_parts (report_id, part_number, description, quantity)
            VALUES ($1, $2, $3, $4)`,
-          [id, part.part_number, part.description, part.quantity]
+          [reportId, part.part_number, part.description, part.quantity]
         );
       }
     }
@@ -726,5 +740,28 @@ export const testEmailService = async (req: Request, res: Response): Promise<voi
       success: false,
       error: 'Failed to test email service'
     });
+  }
+}; 
+
+// Endpoint para cerrar el reporte
+export const closeReport = async (req: Request, res: Response): Promise<void> => {
+  const client = await pool.connect();
+  try {
+    const reportId = req.params.id;
+    const { rows } = await client.query('SELECT general_status FROM reports WHERE id = $1', [reportId]);
+    if (!rows[0]) {
+      res.status(404).json({ success: false, error: 'Report not found' });
+      return;
+    }
+    if (rows[0].general_status === 'CLOSED') {
+      res.status(400).json({ success: false, error: 'Report is already CLOSED' });
+      return;
+    }
+    await client.query('UPDATE reports SET general_status = $1 WHERE id = $2', ['CLOSED', reportId]);
+    res.json({ success: true, message: 'Report closed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 }; 

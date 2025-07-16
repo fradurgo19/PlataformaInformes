@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS reports (
     conclusions TEXT,
     overall_suggestions TEXT,
     status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'completed', 'archived')),
+    general_status VARCHAR(10) DEFAULT 'PENDING' CHECK (general_status IN ('PENDING', 'CLOSED')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

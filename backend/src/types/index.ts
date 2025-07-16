@@ -21,6 +21,7 @@ export interface Report {
   conclusions?: string;
   overall_suggestions?: string;
   status: 'draft' | 'completed' | 'archived';
+  general_status: 'PENDING' | 'CLOSED';
   created_at: string;
   updated_at: string;
   components?: Component[];

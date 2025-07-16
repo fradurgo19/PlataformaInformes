@@ -31,6 +31,7 @@ export const DashboardPage: React.FC = () => {
   const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [machineTypes, setMachineTypes] = useState<{ value: string; label: string }[]>([]);
+  const [statusGeneral, setStatusGeneral] = useState('');
 
   useEffect(() => {
     apiService.getAllUsers().then(res => {
@@ -227,7 +228,19 @@ export const DashboardPage: React.FC = () => {
                 onChange={(e) => handleFilterChange('machineType', e.target.value)}
                 placeholder="Select machine type"
               />
-
+              <Select
+                options={[
+                  { value: '', label: 'All Statuses' },
+                  { value: 'PENDING', label: 'Pending' },
+                  { value: 'CLOSED', label: 'Closed' },
+                ]}
+                value={statusGeneral}
+                onChange={e => {
+                  setStatusGeneral(e.target.value);
+                  setFilters(prev => ({ ...prev, general_status: e.target.value || undefined }));
+                }}
+                placeholder="Filter by status"
+              />
               <Select
                 options={[{ value: '', label: 'Todos los usuarios' }, ...users.map(u => ({ value: u.id, label: u.full_name }))]}
                 value={selectedUserId}
@@ -252,6 +265,7 @@ export const DashboardPage: React.FC = () => {
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Serie</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Date</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Usuario</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
                 </tr>
               </thead>
@@ -276,6 +290,15 @@ export const DashboardPage: React.FC = () => {
                         <p className="text-slate-900">{report.report_date ? format(new Date(report.report_date), 'MMM dd, yyyy') : 'No Date'}</p>
                       </td>
                       <td className="py-4 px-4">{report.user_full_name || 'N/A'}</td>
+                      <td className="py-4 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ml-2 ${
+                          report.general_status === 'CLOSED'
+                            ? 'bg-red-100 text-red-700 border border-red-200'
+                            : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                        }`}>
+                          {report.general_status === 'CLOSED' ? 'CLOSED' : 'PENDING'}
+                        </span>
+                      </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-2">
                           <Link to={`/reports/${report.id}`}>

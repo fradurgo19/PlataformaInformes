@@ -1,0 +1,178 @@
+comboTipoNotificacionCliente.Selected.Value = "AMMANN_ASC70";
+
+"<!DOCTYPE html>
+<html lang='es'>
+<head>
+  <meta charset='UTF-8'>
+  <title>Cotización Maquinaria</title>
+</head>
+<body style='margin:0;padding:0;font-family:Arial,sans-serif;'>
+  <div style='padding:76px;'>
+
+<!-- Página 1 -->
+<div style='width:100%;box-sizing:border-box;padding-bottom:100px;'>
+  <div style='max-width:816px;margin:0 auto;text-align:justify;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1746030986/ASC70_b7xaqy.jpg' alt='Cabecera máquina' style='width:100%;max-width:100%;height:auto;display:block;margin:0 auto;'>
+
+    <div style='text-align:right;font-size:14px;font-weight:bold;color:black;margin-top:-20px;margin-bottom:10px;'>
+      Cotización No. <span style='font-weight:normal;'>{{NumeroCotizacion}}</span>
+    </div>
+
+    <p>
+      <strong>Señor@s:</strong> <strong> "& varItemNotificacionOportunidad.'Nombre(s)' &" </strong><br>
+      <strong>Fecha:</strong> <strong> "& Today() &" </strong><br>
+      <strong>Ciudad:</strong> <strong> "& varItemNotificacionOportunidad.Ciudad.Value &" </strong><br>
+    </p>
+
+    <div style='max-width:816px;margin:0 auto;text-align:justify;'>
+      <p>
+       Respetado Señores: Partequipos Maquinaria S.A.S. se especializa en la comercialización de maquinaria pesada
+        para los sectores de construcción, minería y obras públicas, ofreciendo equipos nuevos y
+        usados de marcas líderes como Hitachi, Yanmar y Case Construction. Con presencia en
+        Medellín, Bogotá, Cali, Bucaramanga, Barranquilla, Montería, Caucasia e Istmina,
+        proporcionamos una extensa gama de repuestos originales y aftermarket, como CF
+        Undercarriage, Filtros Donaldson y Lubricantes Eni.
+        Con más de 23 años de experiencia en el mercado, nos hemos consolidado como un aliado
+        estratégico para nuestros clientes, brindando equipos eficientes y duraderos, y un servicio
+        personalizado que se adapta a sus necesidades operativas. Además, contamos con un equipo
+        técnico altamente calificado que garantiza un servicio postventa excepcional.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Página 2 -->
+<div style='width:100%;box-sizing:border-box;padding-bottom:100px;'>
+  <div style='max-width:816px;margin:0 auto;text-align:justify;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1744840705/Imagen_parte_superior_hoja_2_vbxk33.png' alt='Cabecera genérica' style='width:100%;max-width:1000px;height:100px;object-fit:contain;display:block;'>
+
+    <div style='text-align:right;font-size:14px;font-weight:bold;color:white;margin-top:-20px;margin-bottom:10px;'>
+      Cotización No. <span style='font-weight:normal;'>{{NumeroCotizacion}}</span>
+    </div>
+
+    <h2 style='background-color:#c00000;color:#fff;padding:5px;font-size:16px;'>Cotización maquinaria</h2>
+
+    <p>Ponemos a su amable consideración nuestra oferta de suministro de la siguiente máquina y sus características:</p>
+
+    <table style='width:80%;border-collapse:collapse;margin:auto;'>
+      <thead>
+        <tr>
+          <th style='border:1px solid #000;padding:5px 10px;font-size:14px;background-color:#c00000;color:#fff;'>REFERENCIA</th>
+          <th style='border:1px solid #000;padding:5px 10px;font-size:14px;background-color:#c00000;color:#fff;'>DESCRIPCIÓN</th>
+          <th style='border:1px solid #000;padding:5px 10px;font-size:14px;background-color:#c00000;color:#fff;'>CANT.</th>
+          <th style='border:1px solid #000;padding:5px 10px;font-size:14px;background-color:#c00000;color:#fff;'>VR UNITARIO</th>
+          <th style='border:1px solid #000;padding:5px 10px;font-size:14px;background-color:#c00000;color:#fff;'>SUBTOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+           <td style='border:1px solid #000;padding:5px 10px;font-size:14px;'><strong> "& varItemNotificacionOportunidad.Equipo.Value &" </strong><br></td>
+          <td style='border:1px solid #000;padding:5px 10px;font-size:14px;'><strong> "& varItemNotificacionOportunidad.'Equipo: Maquina'.Value &" </strong><br></td>
+          <td style='border:1px solid #000;padding:5px 10px;font-size:14px;'>1</td>
+          <td style='border:1px solid #000;padding:5px 10px;font-size:14px;'>"& "$ " & Text(varItemNotificacionOportunidad.'Equipo: PVP'.Value; "[$-en-US]#,###.00") &"</td>
+          <td style='border:1px solid #000;padding:5px 10px;font-size:14px;'>"& "$ " & Text(varItemNotificacionOportunidad.'Equipo: PVP'.Value; "[$-en-US]#,###.00") &"</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br>
+
+    <table style='width:60%;margin:auto;border-collapse:collapse;'>
+      <thead>
+        <tr><th colspan='2' style='background-color:#c00000;color:#fff;padding:5px;font-size:16px;'>RESUMEN DE PRECIOS</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style='padding:4px 10px;'><strong>SUBTOTAL</strong></td><td style='padding:4px 10px;text-align:right;'>"& "$ " & Text(varItemNotificacionOportunidad.'Equipo: PVP'.Value; "[$-en-US]#,###.00") &"</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>DESCUENTO</strong></td><td style='padding:4px 10px;text-align:right;'>0</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>IVA</strong></td><td style='padding:4px 10px;text-align:right;'>SIN IVA</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>TOTAL</strong></td><td style='padding:4px 10px;text-align:right;'><strong>"& "$ " & Text(varItemNotificacionOportunidad.'Equipo: PVP'.Value; "[$-en-US]#,###.00") &"</strong></td></tr>
+      </tbody>
+    </table>
+
+    <br>
+
+    <table style='width:60%;margin:auto;border-collapse:collapse;'>
+      <thead>
+        <tr><th colspan='2' style='background-color:#c00000;color:#fff;padding:5px;font-size:16px;'>ESPECIFICACIONES DE LA MÁQUINA</th></tr>
+      </thead>
+      <tbody>
+         <tr><td style='padding:4px 10px;'><strong>MARCA</strong></td><td style='padding:4px 10px;'>"& varItemNotificacionOportunidad.Marca.Value &"</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>MODELO</strong></td><td style='padding:4px 10px;'>"& comboTipoNotificacionCliente.Selected.Value &"</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>ESTADO</strong></td><td style='padding:4px 10px;'>"& varItemNotificacionOportunidad.Estado.Value &"</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>AÑO MODELO</strong></td><td style='padding:4px 10px;'>"& varItemNotificacionOportunidad.'Equipo: Año'.Value &"</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>ANCHO DE ZAPATAS</strong></td><td style='padding:4px 10px;'>"& varItemNotificacionOportunidad.'Equipo: AnchoZapatas'.Value &"</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>CAPACIDAD BALDE</strong></td><td style='padding:4px 10px;'>"& varItemNotificacionOportunidad.'Equipo: CapacidadCucharon'.Value &"</td></tr>
+        <tr><td style='padding:4px 10px;'><strong>GARANTÍA</strong></td><td style='padding:4px 10px;'>"& varItemNotificacionOportunidad.'Equipo: GarMeses'.Value &"</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style='margin-top:auto;text-align:center;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1744842261/piedepaginacotizacion_zvqvv6.png' alt='Pie de página' style='width:100%;max-width:1000px;height:80px;object-fit:contain;display:block;margin:0 auto;'>
+  </div>
+</div>
+
+<!-- Página 3 -->
+<div style='width:100%;box-sizing:border-box;padding-bottom:100px;'>
+  <div style='max-width:816px;margin:0 auto;text-align:justify;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1744840705/Imagen_parte_superior_hoja_2_vbxk33.png' alt='Cabecera genérica' style='width:100%;max-width:1000px;height:100px;object-fit:contain;display:block;'>
+
+    <div style='text-align:right;font-size:14px;font-weight:bold;color:white;margin-top:-20px;margin-bottom:10px;'>
+      Cotización No. <span style='font-weight:normal;'>{{NumeroCotizacion}}</span>
+    </div>
+
+    <h2 style='background-color:#c00000;color:#fff;padding:5px;font-size:16px;'>Términos y condiciones de la cotización</h2>
+
+    <table style='width:90%;margin:auto;border-collapse:collapse;'>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Validez de cotización:</td><td style='vertical-align:top;padding:5px;'>Esta cotización tiene una validez de 5 días calendario a partir de la fecha de emisión. Después de este período, los precios, disponibilidad y condiciones pueden estar sujetos a cambios sin previo aviso</td></tr>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Precio:</td><td style='vertical-align:top;padding:5px;'>Los precios indicados en esta cotización están expresados en COP (Pesos colombianos) y no incluyen tarifas de transporte, seguros u otros cargos adicionales, salvo indicación expresa.</td></tr> 
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Forma de pago: El pago se realizará de la siguiente manera:</td><td style='vertical-align:top;padding:5px;'> a) Contado: • Depósito inicial: Un adelanto del 10% del valor total de la maquina deberá ser abonado para confirmar el pedido. • Saldo restante: El saldo deberá ser cancelado en su totalidad antes de la facturación de la máquina. <br> b) Crédito. En caso de optar por financiación directa con Partequipos Maquinaria S.A.S, se aplicará la liquidación de intereses correspondientes y gastos adicionales (seguro de vida, gastos administrativos, constitución de las garantías) <br> c)  Leasing y/o. El cliente puede optar por adquirir el equipo mediante la financiación de entidades financieras externas.</td></tr>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Tiempo de entrega:</td><td style='vertical-align:top;padding:5px;'>a) Equipos usados: El plazo de entrega es de 6 semanas, este plazo está sujeto a las condiciones de llegada y al estado del equipo al momento de su recepción. <br> b) Equipos nuevos: El plazo de entrega es de 10 días hábiles, contados a partir de la recepción del anticipo y la firma del contrato de compraventa. En caso que el equipo no esté todavía en el país, se determinará el tiempo de entrega según la disponibilidad de las fábricas.</td></tr>
+    </table>
+  </div>
+
+  <div style='margin-top:auto;text-align:center;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1744842261/piedepaginacotizacion_zvqvv6.png' alt='Pie de página' style='width:100%;max-width:1000px;height:80px;object-fit:contain;display:block;margin:0 auto;'>
+  </div>
+</div>
+
+<!-- Página 4 -->
+<div style='width:100%;box-sizing:border-box;padding-bottom:100px;'>
+  <div style='max-width:816px;margin:0 auto;text-align:justify;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1744840705/Imagen_parte_superior_hoja_2_vbxk33.png' alt='Cabecera genérica' style='width:100%;max-width:1000px;height:100px;object-fit:contain;display:block;'>
+
+    <div style='text-align:right;font-size:14px;font-weight:bold;color:white;margin-top:-20px;margin-bottom:10px;'>
+      Cotización No. <span style='font-weight:normal;'>{{NumeroCotizacion}}</span>
+    </div>
+
+    <h2 style='background-color:#c00000;color:#fff;padding:5px;font-size:16px;'>Condiciones adicionales</h2>
+
+    <table style='width:90%;margin:auto;border-collapse:collapse;'>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Lugar de entrega:</td><td style='vertical-align:top;padding:5px;'>La entrega de los equipos se realizará en las instalaciones de Partequipos Maquinaria S.A.S, salvo que se acuerde otro lugar de entrega por escrito entre las partes. Cualquier costo adicional por transporte o envío desde nuestras instalaciones será asumido por el comprador.</td></tr>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Nota sobre la cotización:</td><td style='vertical-align:top;padding:5px;'>Se informa que la presente cotización es con un fin meramente informativo, sin embargo, por la rotación de los equipos, la misma no es vinculante hasta que se realice la respectiva separación, por lo cual, en caso de desear continuar con la compra del equipo se deberá verificar la disponibilidad de estos. </td></tr>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Información adicional:</td><td style='vertical-align:top;padding:5px;'>Cualquier información adicional, gustosamente le(s) será brindada de manera oportuna.</td></tr>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Firma:</td><td style='vertical-align:top;padding:5px;'>Atentamente, <br> "& varItemNotificacionOportunidad.'Creado por'.DisplayName &"</td></tr>
+      <tr><td style='vertical-align:top;padding:5px;width:30%;font-weight:bold;'>Contacto:</td><td style='vertical-align:top;padding:5px;'>Email: "& varItemNotificacionOportunidad.'Creado por'.Email &" <br> Celular:"& LookUp(Asesores; CorreoAsesor = User().Email; Celular) &"</td></tr>
+    </table>
+  </div>
+
+    <div style='text-align:center;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1744842261/piedepaginacotizacion_zvqvv6.png' alt='Pie de página' style='width:100%;max-width:1000px;height:80px;object-fit:contain;display:block;margin:0 auto;'>
+  </div>
+</div>
+
+<!-- Página 5+ (Fichas técnicas) -->
+<div style='width:100%;box-sizing:border-box;'>
+  <div style='max-width:816px;margin:0 auto;text-align:center;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1745965492/ASC70-250-im%C3%A1genes-5_g6cqwz.jpg' alt='Ficha técnica 1' style='width:80%;max-width:80%;margin:0 auto;display:block;'>
+  </div>
+</div>
+<div style='width:100%;box-sizing:border-box;'>
+  <div style='max-width:816px;margin:0 auto;text-align:center;'>
+    <img src='https://res.cloudinary.com/dbufrzoda/image/upload/v1745965492/ASC70-250-im%C3%A1genes-6_dspydu.jpg' alt='Ficha técnica 2' style='width:80%;max-width:80%;margin:0 auto;display:block;'>
+  </div>
+</div>
+
+  </div>
+</body>
+</html>" 

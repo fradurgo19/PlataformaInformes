@@ -87,6 +87,7 @@ export interface Report {
   conclusions?: string;
   overall_suggestions?: string;
   status: ReportStatus;
+  general_status: 'PENDING' | 'CLOSED'; // <-- Agregado para estado general
   created_at: string;
   updated_at: string;
   components?: Component[];
@@ -117,6 +118,7 @@ export interface ReportFilters {
   serialNumber?: string;
   page?: number;
   limit?: number;
+  general_status?: 'PENDING' | 'CLOSED';
 }
 
 // Authentication types

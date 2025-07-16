@@ -163,7 +163,13 @@ export const ReportsPage: React.FC = () => {
                     <p className="text-sm text-slate-600">{report.machine_type || 'N/A'} - {report.model || 'N/A'}</p>
                     <p className="text-sm text-slate-500">S/N: {report.serial_number || 'N/A'}</p>
                   </div>
-                  <StatusBadge status={report.status} size="sm" />
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ml-2 ${
+                    report.general_status === 'CLOSED'
+                      ? 'bg-red-100 text-red-700 border border-red-200'
+                      : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                  }`}>
+                    {report.general_status === 'CLOSED' ? 'CLOSED' : 'PENDING'}
+                  </span>
                 </div>
 
                 <div className="space-y-2 mb-4">
