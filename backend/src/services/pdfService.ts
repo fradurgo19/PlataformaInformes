@@ -87,13 +87,26 @@ export class PDFService {
     const componentsHTMLArray = await Promise.all(componentsHTMLPromises);
     const componentsHTML = componentsHTMLArray.join('');
 
-    const suggestedPartsHTML = suggestedParts.map(part => `
-      <div style="margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 5px; page-break-inside: avoid;">
-        <p><strong>Parte / Part:</strong> ${part.part_number}</p>
-        <p><strong>Descripción / Description:</strong> ${part.description}</p>
-        <p><strong>Cantidad / Quantity:</strong> ${part.quantity}</p>
-      </div>
-    `).join('');
+    const suggestedPartsHTML = suggestedParts.length > 0 ? `
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+        <thead>
+          <tr style="background: #f1f5f9;">
+            <th style="border: 1px solid #ccc; padding: 6px;">Parte / Part</th>
+            <th style="border: 1px solid #ccc; padding: 6px;">Descripción / Description</th>
+            <th style="border: 1px solid #ccc; padding: 6px;">Cantidad / Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${suggestedParts.map(part => `
+            <tr>
+              <td style="border: 1px solid #ccc; padding: 6px;">${part.part_number}</td>
+              <td style="border: 1px solid #ccc; padding: 6px;">${part.description}</td>
+              <td style="border: 1px solid #ccc; padding: 6px; text-align: right;">${part.quantity}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : '';
 
     return `
       <!DOCTYPE html>
