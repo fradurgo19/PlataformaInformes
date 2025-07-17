@@ -13,6 +13,8 @@ const dbConfig: PoolConfig = {
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // Forzar SSL en producción (Neon, Vercel, etc.)
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
 };
 
 const pool = new Pool(dbConfig);
