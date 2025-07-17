@@ -9,6 +9,10 @@
     {
       "src": "backend/src/index.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/[[...catchall]].ts",
+      "use": "@vercel/node"
     }
   ],
   "rewrites": [
@@ -19,7 +23,7 @@
     { "source": "/(.*.png)", "destination": "/dist/$1" },
     { "source": "/(.*.svg)", "destination": "/dist/$1" },
     { "source": "/(.*.ico)", "destination": "/dist/$1" },
-    { "source": "/(.*)", "destination": "/dist/index.html" }
+    { "source": "/(.*)", "destination": "/api/[[...catchall]]" }
   ],
   "env": {
     "NODE_ENV": "production"
