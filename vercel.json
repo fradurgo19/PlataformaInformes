@@ -11,15 +11,15 @@
       "use": "@vercel/node"
     }
   ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "backend/src/index.ts" },
-    { "src": "/assets/(.*)", "dest": "dist/assets/$1" },
-    { "src": "/(.*\\.js)", "dest": "dist/$1" },
-    { "src": "/(.*\\.css)", "dest": "dist/$1" },
-    { "src": "/(.*\\.png)", "dest": "dist/$1" },
-    { "src": "/(.*\\.svg)", "dest": "dist/$1" },
-    { "src": "/(.*\\.ico)", "dest": "dist/$1" },
-    { "src": "/(.*)", "dest": "dist/index.html" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/backend/src/index.ts" },
+    { "source": "/assets/(.*)", "destination": "/dist/assets/$1" },
+    { "source": "/(.*.js)", "destination": "/dist/$1" },
+    { "source": "/(.*.css)", "destination": "/dist/$1" },
+    { "source": "/(.*.png)", "destination": "/dist/$1" },
+    { "source": "/(.*.svg)", "destination": "/dist/$1" },
+    { "source": "/(.*.ico)", "destination": "/dist/$1" },
+    { "source": "/(.*)", "destination": "/dist/index.html" }
   ],
   "env": {
     "NODE_ENV": "production"
