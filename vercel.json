@@ -2,11 +2,9 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
+      "src": "src/main.tsx",
       "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "config": { "distDir": "dist" }
     },
     {
       "src": "backend/src/index.ts",
@@ -14,14 +12,14 @@
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/src/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/api/(.*)", "dest": "backend/src/index.ts" },
+    { "src": "/assets/(.*)", "dest": "dist/assets/$1" },
+    { "src": "/(.*\\.js)", "dest": "dist/$1" },
+    { "src": "/(.*\\.css)", "dest": "dist/$1" },
+    { "src": "/(.*\\.png)", "dest": "dist/$1" },
+    { "src": "/(.*\\.svg)", "dest": "dist/$1" },
+    { "src": "/(.*\\.ico)", "dest": "dist/$1" },
+    { "src": "/(.*)", "dest": "dist/index.html" }
   ],
   "env": {
     "NODE_ENV": "production"
