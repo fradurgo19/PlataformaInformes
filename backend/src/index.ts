@@ -23,6 +23,7 @@ import devRoutes from './routes/dev';
 console.log('NODE_ENV:', process.env.NODE_ENV); // <-- Diagnóstico
 
 const app = express();
+app.set('trust proxy', 1); // Permitir proxy headers en Vercel
 const PORT = process.env.PORT || 3001;
 
 // Prepare allowed origins for CORS and CSP
