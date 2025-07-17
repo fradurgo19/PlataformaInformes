@@ -30,7 +30,11 @@ class Logger {
   private infoLogPath: string;
 
   constructor() {
-    this.logDir = path.join(__dirname, '../../logs');
+    // Usar /tmp en producción (Vercel), ../../logs en desarrollo/local
+    this.logDir = process.env.LOG_DIR ||
+      (process.env.NODE_ENV === 'production'
+        ? '/tmp/backend/logs'
+        : path.join(__dirname, '../../logs'));
     this.auditLogPath = path.join(this.logDir, 'audit.log');
     this.errorLogPath = path.join(this.logDir, 'error.log');
     this.infoLogPath = path.join(this.logDir, 'info.log');
