@@ -17,13 +17,7 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/backend/src/index.ts" },
-    { "source": "/assets/(.*)", "destination": "/dist/assets/$1" },
-    { "source": "/(.*.js)", "destination": "/dist/$1" },
-    { "source": "/(.*.css)", "destination": "/dist/$1" },
-    { "source": "/(.*.png)", "destination": "/dist/$1" },
-    { "source": "/(.*.svg)", "destination": "/dist/$1" },
-    { "source": "/(.*.ico)", "destination": "/dist/$1" },
-    { "source": "/(.*)", "destination": "/dist/index.html" }
+    { "source": "/(.*)", "destination": "/" }
   ],
   "env": {
     "NODE_ENV": "production"
