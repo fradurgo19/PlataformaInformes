@@ -167,11 +167,15 @@ export const ReportViewPage: React.FC = () => {
     ...component,
     photos: Array.isArray(component.photos)
       ? component.photos.map((p: any) => {
-          let src = typeof p === 'string' ? p : (p.file_path || '');
-          src = src.replace(/\\/g, '/');
-          return src.startsWith('http')
-            ? src
-            : `http://localhost:3001/${src.replace(/^\//, '')}`;
+          // Si es string, úsala tal cual
+          if (typeof p === 'string') return p;
+          // Si tiene file_path y es una URL pública, úsala
+          if (p.file_path && p.file_path.startsWith('http')) return p.file_path;
+          // Si tiene file_path pero no es URL, úsala tal cual (por compatibilidad)
+          if (p.file_path) return p.file_path;
+          // Si tiene filename, intenta construir una URL local (solo para desarrollo)
+          if (p.filename) return `/uploads/${p.filename}`;
+          return '';
         })
       : [],
   }));
