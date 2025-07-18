@@ -23,7 +23,7 @@
     { "source": "/(.*.png)", "destination": "/dist/$1" },
     { "source": "/(.*.svg)", "destination": "/dist/$1" },
     { "source": "/(.*.ico)", "destination": "/dist/$1" },
-    { "source": "/(.*)", "destination": "/api/[[...catchall]]" }
+    { "source": "/(.*)", "destination": "/dist/index.html" }
   ],
   "env": {
     "NODE_ENV": "production"
