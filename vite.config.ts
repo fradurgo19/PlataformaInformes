@@ -10,10 +10,18 @@ export default defineConfig({
     minify: 'terser',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          ui: ['lucide-react']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router-dom')) return 'router';
+            if (id.includes('react')) return 'react';
+            if (id.includes('@tanstack/react-query')) return 'react-query';
+            if (id.includes('date-fns')) return 'date-fns';
+            if (id.includes('axios')) return 'axios';
+            if (id.includes('jspdf')) return 'jspdf';
+            if (id.includes('html2canvas')) return 'html2canvas';
+            if (id.includes('lucide-react')) return 'lucide';
+            return 'vendor';
+          }
         }
       }
     }
