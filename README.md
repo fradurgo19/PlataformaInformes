@@ -1,3 +1,4 @@
+<!-- Cambio trivial para forzar clean build cache en Vercel -->
 # 🏗️ Plataforma de Informes de Maquinaria
 
 Sistema completo para la gestión de reportes técnicos de maquinaria industrial, desarrollado con React + TypeScript (Frontend) y Node.js + Express + PostgreSQL (Backend).
