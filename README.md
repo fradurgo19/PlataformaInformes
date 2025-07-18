@@ -1,3 +1,4 @@
+<!-- Otro cambio trivial para forzar build limpio en Vercel -->
 <!-- Deploy: optimización manualChunks en vite.config.ts -->
 # 🏗️ Plataforma de Informes de Maquinaria
 
