@@ -3,6 +3,7 @@ import pool from '../config/database';
 import { Report, CreateReportRequest, ApiResponse } from '../types';
 import { PDFService } from '../services/pdfService';
 import { EmailService } from '../services/emailService';
+import { uploadFileToSupabase } from '../utils/supabaseStorage';
 
 export const createReport = async (req: Request, res: Response) => {
   const client = await pool.connect();
@@ -75,15 +76,17 @@ export const createReport = async (req: Request, res: Response) => {
 
         if (componentPhotos.length > 0) {
           for (const photo of componentPhotos) {
+            // Subir a Supabase Storage
+            const publicUrl = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
             await client.query(
               `INSERT INTO photos (
                 component_id, filename, original_name, file_path, file_size, mime_type
               ) VALUES ($1, $2, $3, $4, $5, $6)`,
               [
                 componentId,
-                photo.filename,
                 photo.originalname,
-                photo.path,
+                photo.originalname,
+                publicUrl,
                 photo.size,
                 photo.mimetype,
               ]
