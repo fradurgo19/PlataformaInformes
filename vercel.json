@@ -5,9 +5,21 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
+    },
+    {
+      "src": "backend/src/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/[[...catchall]].ts",
+      "use": "@vercel/node"
     }
   ],
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/backend/src/index.ts" },
     { "source": "/(.*)", "destination": "/" }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 } 
