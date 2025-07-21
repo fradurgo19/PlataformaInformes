@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer';
+import chromium from '@sparticuz/chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 import { Report, Component, Photo, SuggestedPart } from '../types';
 import fs from 'fs';
 import path from 'path';
@@ -205,8 +206,10 @@ export class PDFService {
   static async generatePDF(report: Report, components: Component[], photos: Photo[], suggestedParts: SuggestedPart[]): Promise<Buffer> {
     try {
       const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
       });
 
       const page = await browser.newPage();
