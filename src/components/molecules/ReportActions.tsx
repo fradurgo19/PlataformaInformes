@@ -113,11 +113,11 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
           {isDownloading ? (
             <>
               <LoadingSpinner size="sm" />
-              Descargando...
+              Downloading...
             </>
           ) : (
             <>
-              📄 Descargar PDF
+              📄 Download PDF
             </>
           )}
         </Button>
@@ -126,49 +126,49 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
           onClick={() => setShowEmailForm(!showEmailForm)}
           className="bg-green-600 hover:bg-green-700 text-white"
         >
-          📧 Enviar por Email
+          📧 Send by Email
         </Button>
       </div>
 
       {showEmailForm && (
         <div className="bg-gray-50 p-4 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Enviar Reporte por Email</h3>
+          <h3 className="text-lg font-semibold mb-4">Send Report by Email</h3>
           
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Emails (separados por comas)
+                Emails (comma separated)
               </label>
               <Input
                 type="text"
                 value={emails}
                 onChange={(e) => setEmails(e.target.value)}
-                placeholder="email1@ejemplo.com, email2@ejemplo.com"
+                placeholder="email1@example.com, email2@example.com"
                 className="w-full"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Asunto (opcional)
+                Subject (optional)
               </label>
               <Input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder={`Reporte de Inspección - ${reportName}`}
+                placeholder={`Inspection Report - ${reportName}`}
                 className="w-full"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mensaje personalizado (opcional)
+                Custom message (optional)
               </label>
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Mensaje personalizado para el destinatario..."
+                placeholder="Custom message for the recipient..."
                 rows={3}
                 className="w-full"
               />
@@ -183,10 +183,10 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
                 {isSendingEmail ? (
                   <>
                     <LoadingSpinner size="sm" />
-                    Enviando...
+                    Sending...
                   </>
                 ) : (
-                  'Enviar Email'
+                  'Send Email'
                 )}
               </Button>
 
@@ -199,7 +199,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
                 }}
                 className="bg-gray-500 hover:bg-gray-600 text-white"
               >
-                Cancelar
+                Cancel
               </Button>
             </div>
           </div>
