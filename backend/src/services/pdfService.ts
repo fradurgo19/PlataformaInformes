@@ -1,4 +1,4 @@
-import chromium from '@sparticuz/chrome-aws-lambda';
+import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 import { Report, Component, Photo, SuggestedPart } from '../types';
 import fs from 'fs';
@@ -205,18 +205,20 @@ export class PDFService {
 
   static async generatePDF(report: Report, components: Component[], photos: Photo[], suggestedParts: SuggestedPart[]): Promise<Buffer> {
     try {
+      const executablePath = await chromium.executablePath();
+      if (!executablePath) {
+        throw new Error('Chromium executablePath not found. PDF generation is not supported in this environment.');
+      }
       const browser = await puppeteer.launch({
         args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: process.env.AWS_EXECUTION_ENV ? await chromium.executablePath : undefined,
-        headless: chromium.headless,
+        executablePath,
+        headless: true,
+        ignoreDefaultArgs: ['--disable-extensions'],
       });
 
       const page = await browser.newPage();
       const html = await this.generateHTML(report, components, photos, suggestedParts);
-      
       await page.setContent(html, { waitUntil: 'networkidle0' });
-
       const pdfBuffer = await page.pdf({
         format: 'A4',
         margin: {
@@ -228,7 +230,6 @@ export class PDFService {
         printBackground: true,
         displayHeaderFooter: false
       });
-
       await browser.close();
       return Buffer.from(pdfBuffer);
     } catch (error) {
