@@ -208,7 +208,7 @@ export class PDFService {
       const browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath,
+        executablePath: process.env.AWS_EXECUTION_ENV ? await chromium.executablePath : undefined,
         headless: chromium.headless,
       });
 
