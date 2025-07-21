@@ -24,19 +24,23 @@ export class PDFService {
       const componentPhotos = photos.filter(photo => photo.component_id === component.id);
       
       const photosHTMLPromises = componentPhotos.map(async (photo) => {
-        // Construct the absolute path to the image file
-        const imagePath = path.join(__dirname, '..', '..', photo.file_path);
-        
+        let imageBase64 = '';
+        let mimeType = photo.mime_type || 'image/jpeg';
+
         try {
-          // Read the image file and convert it to base64
-          const imageBuffer = await fs.promises.readFile(imagePath);
-          const imageBase64 = imageBuffer.toString('base64');
-          const mimeType = photo.mime_type || 'image/jpeg'; // Fallback MIME type
-          
+          if (photo.file_path.startsWith('http')) {
+            // Descargar la imagen desde Supabase Storage
+            const response = await axios.get(photo.file_path, { responseType: 'arraybuffer' });
+            imageBase64 = Buffer.from(response.data, 'binary').toString('base64');
+          } else {
+            // Leer desde disco (compatibilidad)
+            const imagePath = path.join(__dirname, '..', '..', photo.file_path);
+            const imageBuffer = await fs.promises.readFile(imagePath);
+            imageBase64 = imageBuffer.toString('base64');
+          }
           return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" style="max-width: 200px; margin: 5px; border: 1px solid #ddd; display: inline-block; vertical-align: top;">`;
         } catch (error) {
-          console.error(`Error reading image file for PDF: ${imagePath}`, error);
-          // Return a placeholder or empty string if image is not found
+          console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
           return `<div style="width: 200px; height: 150px; border: 1px dashed #ccc; text-align: center; padding: 10px; display: inline-block;">Image not found</div>`;
         }
       });
