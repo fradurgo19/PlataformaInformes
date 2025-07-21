@@ -27,7 +27,7 @@ router.put('/:id', upload.any(), handleUploadError, validateFileUpload, updateRe
 router.delete('/:id', deleteReport as any);
 
 // PDF and Email routes
-// router.get('/:id/pdf', requireRole(['admin', 'user']), downloadPDF as any);
+router.get('/:id/pdf', requireRole(['admin', 'user']), downloadPDF as any);
 router.post('/:id/email', sendReportEmail as any);
 router.get('/test/email', testEmailService as any);
 
