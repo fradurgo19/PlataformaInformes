@@ -456,10 +456,12 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
       // Add new photos
       const newPhotos = files.filter(file => file.fieldname === `photos_${index}`);
       for (const photo of newPhotos) {
+        // Subir a Supabase Storage y obtener info de la imagen comprimida
+        const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
         await client.query(
           `INSERT INTO photos (component_id, filename, original_name, file_path, file_size, mime_type)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [componentId, photo.filename, photo.originalname, photo.path, photo.size, photo.mimetype]
+          [componentId, photo.originalname, photo.originalname, publicUrl, size, mimetype]
         );
       }
     }
