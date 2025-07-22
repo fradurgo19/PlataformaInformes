@@ -245,7 +245,7 @@ export const ReportViewPage: React.FC = () => {
 
           {/* Report Actions */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Acciones del Reporte</h2>
+            <h2 className="text-xl font-semibold text-slate-900 mb-4">Report Actions</h2>
             <ReportActions
               reportId={report.id}
               reportName={`${report.client_name}_${report.machine_type}`}
