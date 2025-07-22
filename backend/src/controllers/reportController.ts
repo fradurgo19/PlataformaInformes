@@ -76,8 +76,8 @@ export const createReport = async (req: Request, res: Response) => {
 
         if (componentPhotos.length > 0) {
           for (const photo of componentPhotos) {
-            // Subir a Supabase Storage
-            const publicUrl = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
+            // Subir a Supabase Storage y obtener info de la imagen comprimida
+            const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
             await client.query(
               `INSERT INTO photos (
                 component_id, filename, original_name, file_path, file_size, mime_type
@@ -87,8 +87,8 @@ export const createReport = async (req: Request, res: Response) => {
                 photo.originalname,
                 photo.originalname,
                 publicUrl,
-                photo.size,
-                photo.mimetype,
+                size,
+                mimetype,
               ]
             );
           }
