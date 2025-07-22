@@ -80,15 +80,15 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-6 border-b border-slate-200 flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900">
-              MachineryReports
-            </h1>
             <img
               src="https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png"
               alt="Company Logo"
-              className="w-20 h-auto object-contain ml-2"
+              className="w-20 h-auto object-contain"
               style={{ maxWidth: '96px' }}
             />
+            <h1 className="text-xl font-bold text-slate-900">
+              MachineryReports
+            </h1>
           </div>
           <p className="text-sm text-slate-600 mt-1 px-6">
             Technical Inspection System
