@@ -86,8 +86,8 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
             <img
               src="https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png"
               alt="Company Logo"
-              className="w-12 h-auto object-contain ml-2"
-              style={{ maxWidth: '48px' }}
+              className="w-20 h-auto object-contain ml-2"
+              style={{ maxWidth: '96px' }}
             />
           </div>
           <p className="text-sm text-slate-600 mt-1 px-6">
