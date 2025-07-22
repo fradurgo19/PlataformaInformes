@@ -86,7 +86,7 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
               className="w-20 h-auto object-contain"
               style={{ maxWidth: '96px' }}
             />
-            <h1 className="text-xl font-bold text-slate-900">
+            <h1 className="text-base font-bold text-slate-900">
               MachineryReports
             </h1>
           </div>
