@@ -234,7 +234,7 @@ export const ReportViewPage: React.FC = () => {
                   {isClosing ? 'Closing...' : 'Close report'}
                 </Button>
               )}
-              <Link to={`/reports/${report.id}/edit`}>
+              <Link to={`/reports/${report.id}/edit`} className="ml-6">
                 <Button variant="outline" disabled={report.general_status === 'CLOSED'}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
