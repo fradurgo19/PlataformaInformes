@@ -214,27 +214,27 @@ export const ReportViewPage: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              {/* Badge para estado general */}
-              <span className={`px-2 py-1 rounded text-xs font-semibold ml-2 ${
-                report.general_status === 'CLOSED'
-                  ? 'bg-red-100 text-red-700 border border-red-200'
-                  : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-              }`}>
-                {report.general_status === 'CLOSED' ? 'CLOSED' : 'PENDING'}
-              </span>
+            <div className="flex items-center">
               {/* Botón para cerrar reporte: solo si es el creador y está pendiente */}
               {report.general_status === 'PENDING' && authState.user?.id === report.user_id && (
                 <Button
                   variant="destructive"
                   onClick={handleCloseReport}
                   disabled={isClosing}
-                  className="ml-2"
+                  className="mr-4"
                 >
                   {isClosing ? 'Closing...' : 'Close report'}
                 </Button>
               )}
-              <Link to={`/reports/${report.id}/edit`} className="ml-6">
+              {/* Badge para estado general */}
+              <span className={`px-2 py-1 rounded text-xs font-semibold mx-2 ${
+                report.general_status === 'CLOSED'
+                  ? 'bg-red-100 text-red-700 border border-red-200'
+                  : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+              }`}>
+                {report.general_status === 'CLOSED' ? 'CLOSED' : 'PENDING'}
+              </span>
+              <Link to={`/reports/${report.id}/edit`} className="ml-4">
                 <Button variant="outline" disabled={report.general_status === 'CLOSED'}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
