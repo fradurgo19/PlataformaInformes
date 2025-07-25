@@ -14,6 +14,7 @@ export const ParametersPage: React.FC = () => {
   const [form, setForm] = useState({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', resource_url: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchParameters = async () => {
     setLoading(true);
@@ -69,6 +70,12 @@ export const ParametersPage: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  // Filtrado de parámetros por model o nombre del parámetro
+  const filteredParameters = parameters.filter((p) =>
+    p.model.toLowerCase().includes(search.toLowerCase()) ||
+    p.parameter.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <DashboardLayout>
@@ -140,11 +147,20 @@ export const ParametersPage: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
           <h2 className="text-xl font-semibold mb-4">Parameter List</h2>
+          <div className="mb-4 max-w-xs">
+            <Input
+              label="Buscar por Model o Parameter"
+              name="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Escribe el model o nombre del parámetro..."
+            />
+          </div>
           {loading ? (
             <div>Loading...</div>
           ) : error ? (
             <div className="text-red-600">{error}</div>
-          ) : (
+          ) :
             <div className="overflow-x-auto">
               <table className="min-w-full border text-sm">
                 <thead>
@@ -158,7 +174,7 @@ export const ParametersPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {parameters.map((p) => (
+                  {filteredParameters.map((p) => (
                     <tr key={p.id}>
                       <td className="border px-2 py-1">{p.parameter}</td>
                       <td className="border px-2 py-1">{p.parameter_type}</td>
@@ -172,7 +188,7 @@ export const ParametersPage: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {parameters.length === 0 && (
+                  {filteredParameters.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center text-slate-400 py-4">No parameters found</td>
                     </tr>
