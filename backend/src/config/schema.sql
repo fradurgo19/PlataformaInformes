@@ -90,6 +90,16 @@ CREATE TABLE IF NOT EXISTS component_types (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Resources table
+CREATE TABLE IF NOT EXISTS resources (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    model VARCHAR(100) NOT NULL,
+    resource_name VARCHAR(255) NOT NULL,
+    resource_url VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_reports_user_id ON reports(user_id);
 CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at);
@@ -129,6 +139,11 @@ CREATE TRIGGER update_machine_types_updated_at BEFORE UPDATE ON machine_types
 
 DROP TRIGGER IF EXISTS update_component_types_updated_at ON component_types;
 CREATE TRIGGER update_component_types_updated_at BEFORE UPDATE ON component_types
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger for resources table
+DROP TRIGGER IF EXISTS update_resources_updated_at ON resources;
+CREATE TRIGGER update_resources_updated_at BEFORE UPDATE ON resources
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default admin user (password: admin123)

@@ -20,6 +20,7 @@ import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
 import { UsersAdminPage } from './pages/UsersAdminPage';
+import { ResourcesPage } from './pages/ResourcesPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -117,6 +118,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <UsersAdminPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/resources"
+        element={
+          <ProtectedRoute>
+            <ResourcesPage />
           </ProtectedRoute>
         }
       />

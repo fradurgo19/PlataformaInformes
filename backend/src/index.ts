@@ -18,6 +18,7 @@ import machineTypeRoutes from './routes/machineTypes';
 import componentTypeRoutes from './routes/componentTypes';
 import alertRoutes from './routes/alerts';
 import devRoutes from './routes/dev';
+import resourceRoutes from './routes/resource';
 
 
 console.log('NODE_ENV:', process.env.NODE_ENV); // <-- Diagnóstico
@@ -105,6 +106,7 @@ app.use('/api/machine-types', machineTypeRoutes);
 app.use('/api/component-types', componentTypeRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/dev', devRoutes);
+app.use('/api/resources', resourceRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
