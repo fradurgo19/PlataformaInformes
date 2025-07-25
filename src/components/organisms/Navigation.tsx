@@ -39,6 +39,7 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/reports/new', label: 'New Report', icon: Plus },
     { path: '/resources', label: 'Resources', icon: FileText },
+    { path: '/parameters', label: 'Parameters', icon: FileText },
   ];
   
   if (isAdmin) {

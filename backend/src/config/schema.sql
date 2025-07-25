@@ -100,6 +100,19 @@ CREATE TABLE IF NOT EXISTS resources (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Parameters table
+CREATE TABLE IF NOT EXISTS parameters (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    parameter VARCHAR(255) NOT NULL,
+    parameter_type VARCHAR(100) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    min_range NUMERIC NOT NULL,
+    max_range NUMERIC NOT NULL,
+    resource_url VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_reports_user_id ON reports(user_id);
 CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at);
@@ -144,6 +157,11 @@ CREATE TRIGGER update_component_types_updated_at BEFORE UPDATE ON component_type
 -- Trigger for resources table
 DROP TRIGGER IF EXISTS update_resources_updated_at ON resources;
 CREATE TRIGGER update_resources_updated_at BEFORE UPDATE ON resources
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger for parameters table
+DROP TRIGGER IF EXISTS update_parameters_updated_at ON parameters;
+CREATE TRIGGER update_parameters_updated_at BEFORE UPDATE ON parameters
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default admin user (password: admin123)

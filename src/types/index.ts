@@ -42,12 +42,15 @@ export interface Photo {
 }
 
 export interface Parameter {
-  name: string;
-  minValue: number;
-  maxValue: number;
-  measuredValue: number;
-  corrected: boolean;
-  observation: string;
+  id: string;
+  parameter: string;
+  parameter_type: string;
+  model: string;
+  min_range: number;
+  max_range: number;
+  resource_url: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Component {

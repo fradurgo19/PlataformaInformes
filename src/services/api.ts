@@ -1,4 +1,4 @@
-import { Report, ReportFilters, PaginatedResponse, ApiResponse, User, LoginRequest, LoginResponse, CreateReportRequest, Resource } from '../types';
+import { Report, ReportFilters, PaginatedResponse, ApiResponse, User, LoginRequest, LoginResponse, CreateReportRequest, Resource, Parameter } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -438,6 +438,23 @@ class ApiService {
       body: JSON.stringify(data),
     });
     return this.handleResponse<Resource>(response);
+  }
+
+  async getParameters(): Promise<ApiResponse<Parameter[]>> {
+    const response = await fetch(`${API_BASE_URL}/parameters`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<Parameter[]>(response);
+  }
+
+  async createParameter(data: { parameter: string; parameter_type: string; model: string; min_range: number; max_range: number; resource_url: string }): Promise<ApiResponse<Parameter>> {
+    const response = await fetch(`${API_BASE_URL}/parameters`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<Parameter>(response);
   }
 }
 
