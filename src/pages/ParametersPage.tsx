@@ -160,7 +160,7 @@ export const ParametersPage: React.FC = () => {
             <div>Loading...</div>
           ) : error ? (
             <div className="text-red-600">{error}</div>
-          ) :
+          ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full border text-sm">
                 <thead>
