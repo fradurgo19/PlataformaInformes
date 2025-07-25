@@ -149,11 +149,11 @@ export const ParametersPage: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">Parameter List</h2>
           <div className="mb-4 max-w-xs">
             <Input
-              label="Buscar por Model o Parameter"
+              label="Search by Model or Parameter"
               name="search"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Escribe el model o nombre del parámetro..."
+              placeholder="Type model or parameter name..."
             />
           </div>
           {loading ? (
