@@ -145,3 +145,12 @@ export interface CreateReportRequest {
   components: Omit<Component, 'id' | 'report_id' | 'created_at' | 'updated_at'>[];
   suggested_parts: Omit<SuggestedPart, 'id' | 'report_id' | 'created_at' | 'updated_at'>[];
 }
+
+export interface Resource {
+  id: string;
+  model: string;
+  resource_name: string;
+  resource_url: string;
+  created_at: string;
+  updated_at: string;
+}

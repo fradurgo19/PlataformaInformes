@@ -3,15 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
 import { Button } from '../components/atoms/Button';
 import { Input } from '../components/atoms/Input';
-
-interface Resource {
-  id: string;
-  model: string;
-  resource_name: string;
-  resource_url: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Resource } from '../types';
+import { apiService } from '../services/api';
 
 export const ResourcesPage: React.FC = () => {
   const { state: authState } = useAuth();
@@ -26,13 +19,9 @@ export const ResourcesPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/resources', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const data = await apiService.getResources();
       if (data.success) {
-        setResources(data.data);
+        setResources(data.data || []);
       } else {
         setError(data.error || 'Error fetching resources');
       }
@@ -60,16 +49,7 @@ export const ResourcesPage: React.FC = () => {
     }
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/resources', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
+      const data = await apiService.createResource(form);
       if (data.success) {
         setForm({ model: '', resource_name: '', resource_url: '' });
         fetchResources();
