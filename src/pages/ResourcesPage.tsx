@@ -14,6 +14,7 @@ export const ResourcesPage: React.FC = () => {
   const [form, setForm] = useState({ model: '', resource_name: '', resource_url: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchResources = async () => {
     setLoading(true);
@@ -63,6 +64,12 @@ export const ResourcesPage: React.FC = () => {
     }
   };
 
+  // Filtrado de recursos por model o nombre del recurso
+  const filteredResources = resources.filter((r) =>
+    r.model.toLowerCase().includes(search.toLowerCase()) ||
+    r.resource_name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8">
@@ -107,6 +114,15 @@ export const ResourcesPage: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
           <h2 className="text-xl font-semibold mb-4">Resource List</h2>
+          <div className="mb-4 max-w-xs">
+            <Input
+              label="Search by Model or Resource Name"
+              name="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Type model or resource name..."
+            />
+          </div>
           {loading ? (
             <div>Loading...</div>
           ) : error ? (
@@ -122,7 +138,7 @@ export const ResourcesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {resources.map((r) => (
+                  {filteredResources.map((r) => (
                     <tr key={r.id}>
                       <td className="border px-2 py-1">{r.model}</td>
                       <td className="border px-2 py-1">{r.resource_name}</td>
@@ -133,7 +149,7 @@ export const ResourcesPage: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {resources.length === 0 && (
+                  {filteredResources.length === 0 && (
                     <tr>
                       <td colSpan={3} className="text-center text-slate-400 py-4">No resources found</td>
                     </tr>
