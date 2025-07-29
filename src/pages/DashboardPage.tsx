@@ -242,10 +242,10 @@ export const DashboardPage: React.FC = () => {
                 placeholder="Filter by status"
               />
               <Select
-                options={[{ value: '', label: 'Todos los usuarios' }, ...users.map(u => ({ value: u.id, label: u.full_name }))]}
+                options={[{ value: '', label: 'All users' }, ...users.map(u => ({ value: u.id, label: u.full_name }))]}
                 value={selectedUserId}
                 onChange={e => handleUserFilterChange(e.target.value)}
-                placeholder="Filtrar por usuario"
+                placeholder="Filter by user"
               />
               <div className="md:col-span-5 flex justify-end">
                 <Button variant="outline" size="sm" onClick={clearFilters}>
@@ -264,7 +264,7 @@ export const DashboardPage: React.FC = () => {
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Machine</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Serie</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">Usuario</th>
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">User</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Status</th>
                   <th className="text-left py-3 px-4 font-medium text-slate-600">Actions</th>
                 </tr>

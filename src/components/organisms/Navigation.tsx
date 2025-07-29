@@ -45,7 +45,7 @@ export const Navigation: React.FC<NavigationProps> = ({ isOpen, onToggle }) => {
   if (isAdmin) {
     navItems.push(
       { path: '/admin', label: 'Administration', icon: Shield },
-      { path: '/admin/users', label: 'Usuarios', icon: User }
+      { path: '/admin/users', label: 'Users', icon: User }
     );
   }
 
