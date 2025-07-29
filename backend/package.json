@@ -13,7 +13,10 @@
     "test:coverage": "jest --coverage",
     "db:init": "node init-db.js",
     "db:reset": "node reset-db.js",
-    "db:seed": "node seed-data.js"
+    "db:seed": "node seed-data.js",
+    "db:clean": "node clean-test-data.js",
+    "db:clean:prod": "node clean-production-data.js",
+    "db:stats": "node clean-test-data.js --stats"
   },
   "keywords": [
     "machinery",
@@ -38,6 +41,7 @@
     "nodemailer": "^7.0.3",
     "pg": "^8.11.3",
     "puppeteer": "^24.10.1",
+    "@supabase/supabase-js": "^2.39.0",
     "puppeteer-core": "^24.14.0",
     "typescript": "^5.3.3"
   },
