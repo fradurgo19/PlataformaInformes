@@ -12,7 +12,17 @@ const roleOptions = [
   { value: 'viewer', label: 'Viewer' },
 ];
 
-const initialForm = { full_name: '', username: '', email: '', password: '', role: 'user' };
+const initialForm = { 
+  full_name: '', 
+  username: '', 
+  email: '', 
+  password: '', 
+  role: 'user',
+  zone: '',
+  brands: [] as string[],
+  specialty: '',
+  rating: undefined as number | undefined
+};
 
 export const UsersAdminPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -48,7 +58,14 @@ export const UsersAdminPage: React.FC = () => {
   };
 
   const handleOpenEdit = (user: User) => {
-    setForm({ ...user, password: '' });
+    setForm({ 
+      ...user, 
+      password: '',
+      brands: user.brands || [],
+      zone: user.zone || '',
+      specialty: user.specialty || '',
+      rating: user.rating
+    });
     setShowEdit(true);
     setShowCreate(false);
     setEditId(user.id);
@@ -63,7 +80,19 @@ export const UsersAdminPage: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    if (name === 'brands') {
+      // Convertir string de marcas separadas por comas a array
+      const brandsArray = value ? value.split(',').map(b => b.trim()).filter(b => b) : [];
+      setForm({ ...form, [name]: brandsArray });
+    } else if (name === 'rating') {
+      // Convertir rating a número
+      const ratingNum = value ? parseFloat(value) : undefined;
+      setForm({ ...form, [name]: ratingNum });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -77,6 +106,10 @@ export const UsersAdminPage: React.FC = () => {
         password: form.password,
         full_name: form.full_name,
         role: form.role,
+        zone: form.zone || undefined,
+        brands: form.brands.length > 0 ? form.brands : undefined,
+        specialty: form.specialty || undefined,
+        rating: form.rating,
       });
       if (res.success) {
         fetchUsers();
@@ -106,7 +139,10 @@ export const UsersAdminPage: React.FC = () => {
   const filteredUsers = users.filter(u =>
     u.full_name.toLowerCase().includes(search.toLowerCase()) ||
     u.username.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
+    u.email.toLowerCase().includes(search.toLowerCase()) ||
+    (u.zone && u.zone.toLowerCase().includes(search.toLowerCase())) ||
+    (u.specialty && u.specialty.toLowerCase().includes(search.toLowerCase())) ||
+    (u.brands && u.brands.some(brand => brand.toLowerCase().includes(search.toLowerCase())))
   );
 
   return (
@@ -118,7 +154,7 @@ export const UsersAdminPage: React.FC = () => {
         </div>
         <div className="mb-4 flex gap-2">
           <Input
-                            placeholder="Search by name, username or email"
+                            placeholder="Search by name, username, email, zone, specialty or brands"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full"
@@ -128,11 +164,15 @@ export const UsersAdminPage: React.FC = () => {
           <table className="min-w-full border border-slate-200 rounded-lg text-sm">
             <thead className="bg-slate-50">
               <tr>
-                                  <th className="px-2 py-2">Name</th>
-                              <th className="px-2 py-2">Username</th>
-              <th className="px-2 py-2">Email</th>
-              <th className="px-2 py-2">Role</th>
-                                  <th className="px-2 py-2">Actions</th>
+                <th className="px-2 py-2">Name</th>
+                <th className="px-2 py-2">Username</th>
+                <th className="px-2 py-2">Email</th>
+                <th className="px-2 py-2">Role</th>
+                <th className="px-2 py-2">Zone</th>
+                <th className="px-2 py-2">Brands</th>
+                <th className="px-2 py-2">Specialty</th>
+                <th className="px-2 py-2">Rating</th>
+                <th className="px-2 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -142,6 +182,14 @@ export const UsersAdminPage: React.FC = () => {
                   <td className="px-2 py-2">{user.username}</td>
                   <td className="px-2 py-2">{user.email}</td>
                   <td className="px-2 py-2">{user.role}</td>
+                  <td className="px-2 py-2">{user.zone || '-'}</td>
+                  <td className="px-2 py-2">
+                    {user.brands && user.brands.length > 0 ? user.brands.join(', ') : '-'}
+                  </td>
+                  <td className="px-2 py-2">{user.specialty || '-'}</td>
+                  <td className="px-2 py-2">
+                    {user.rating !== undefined ? `${user.rating}/5` : '-'}
+                  </td>
                   <td className="px-2 py-2">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(user)}>
                       Edit
@@ -162,6 +210,10 @@ export const UsersAdminPage: React.FC = () => {
               <Input name="email" value={form.email} onChange={handleChange} placeholder="Email" type="email" required />
               <Input name="password" value={form.password} onChange={handleChange} placeholder="Password" type="password" required />
               <Select name="role" value={form.role} onChange={handleChange} options={roleOptions} required />
+              <Input name="zone" value={form.zone} onChange={handleChange} placeholder="Zone (e.g., Bogotá, Medellín)" />
+              <Input name="brands" value={form.brands.join(', ')} onChange={handleChange} placeholder="Brands (comma separated, e.g., CAT, Komatsu)" />
+              <Input name="specialty" value={form.specialty} onChange={handleChange} placeholder="Specialty (e.g., Excavators, Loaders)" />
+              <Input name="rating" type="number" min="0" max="5" step="0.1" value={form.rating?.toString() || ''} onChange={handleChange} placeholder="Rating (0-5)" />
               {error && <div className="text-red-600 text-sm">{error}</div>}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>
@@ -180,6 +232,10 @@ export const UsersAdminPage: React.FC = () => {
               <Input name="email" value={form.email} onChange={handleChange} placeholder="Email" type="email" required />
               <Input name="password" value={form.password} onChange={handleChange} placeholder="New password (optional)" type="password" />
               <Select name="role" value={form.role} onChange={handleChange} options={roleOptions} required />
+              <Input name="zone" value={form.zone} onChange={handleChange} placeholder="Zone (e.g., Bogotá, Medellín)" />
+              <Input name="brands" value={form.brands.join(', ')} onChange={handleChange} placeholder="Brands (comma separated, e.g., CAT, Komatsu)" />
+              <Input name="specialty" value={form.specialty} onChange={handleChange} placeholder="Specialty (e.g., Excavators, Loaders)" />
+              <Input name="rating" type="number" min="0" max="5" step="0.1" value={form.rating?.toString() || ''} onChange={handleChange} placeholder="Rating (0-5)" />
               {error && <div className="text-red-600 text-sm">{error}</div>}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>

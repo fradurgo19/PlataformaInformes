@@ -73,7 +73,17 @@ class ApiService {
     }
   }
 
-  async register(userData: { username: string; email: string; password: string; full_name: string; role: string }): Promise<ApiResponse<User>> {
+  async register(userData: { 
+    username: string; 
+    email: string; 
+    password: string; 
+    full_name: string; 
+    role: string;
+    zone?: string;
+    brands?: string[];
+    specialty?: string;
+    rating?: number;
+  }): Promise<ApiResponse<User>> {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: this.getHeaders(),
