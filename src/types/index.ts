@@ -26,6 +26,10 @@ export interface User {
   email: string;
   full_name: string;
   role: UserRole;
+  zone?: string;
+  brands?: string[];
+  specialty?: string;
+  rating?: number;
   created_at: string;
   updated_at: string;
 }
@@ -133,6 +137,27 @@ export interface LoginRequest {
 export interface LoginResponse {
   user: User;
   token: string;
+}
+
+export interface UpdateUserRequest {
+  full_name?: string;
+  email?: string;
+  zone?: string;
+  brands?: string[];
+  specialty?: string;
+  rating?: number;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+  zone?: string;
+  brands?: string[];
+  specialty?: string;
+  rating?: number;
 }
 
 export interface CreateReportRequest {

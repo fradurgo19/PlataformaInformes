@@ -92,7 +92,15 @@ class ApiService {
     return this.handleResponse<User>(response);
   }
 
-  async updateProfile(updates: { full_name: string; email: string; password?: string }): Promise<ApiResponse<User>> {
+  async updateProfile(updates: { 
+    full_name: string; 
+    email: string; 
+    zone?: string;
+    brands?: string[];
+    specialty?: string;
+    rating?: number;
+    password?: string 
+  }): Promise<ApiResponse<User>> {
     const response = await fetch(`${API_BASE_URL}/auth/profile`, {
       method: 'PUT',
       headers: this.getHeaders(),

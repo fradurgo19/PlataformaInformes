@@ -51,7 +51,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       username: user.username,
       email: user.email,
       full_name: user.full_name,
-      role: user.role
+      role: user.role,
+      zone: user.zone,
+      brands: user.brands,
+      specialty: user.specialty,
+      rating: user.rating
     };
     
     const token = jwt.sign(payload, secret, { expiresIn: '7d' });
@@ -85,7 +89,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password, full_name, role = 'user' } = req.body;
+    const { username, email, password, full_name, role = 'user', zone, brands, specialty, rating } = req.body;
 
     if (!username || !email || !password || !full_name) {
       res.status(400).json({
@@ -100,6 +104,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({
         success: false,
         error: 'Invalid role. Must be admin, user, or viewer'
+      });
+      return;
+    }
+
+    // Validate rating if provided
+    if (rating !== undefined && (rating < 0 || rating > 5)) {
+      res.status(400).json({
+        success: false,
+        error: 'Rating must be between 0 and 5'
       });
       return;
     }
@@ -124,8 +137,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Create user
     const newUserResult = await pool.query(
-      'INSERT INTO users (username, email, password_hash, full_name, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, full_name, role, created_at, updated_at',
-      [username, email, passwordHash, full_name, role]
+      'INSERT INTO users (username, email, password_hash, full_name, role, zone, brands, specialty, rating) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at',
+      [username, email, passwordHash, full_name, role, zone, brands, specialty, rating]
     );
 
     const newUser = newUserResult.rows[0];
@@ -151,7 +164,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     const userId = (req as any).user.id;
 
     const userResult = await pool.query(
-      'SELECT id, username, email, full_name, role, created_at, updated_at FROM users WHERE id = $1',
+      'SELECT id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at FROM users WHERE id = $1',
       [userId]
     );
 
@@ -181,12 +194,21 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
-    const { full_name, email, password } = req.body;
+    const { full_name, email, password, zone, brands, specialty, rating } = req.body;
 
     if (!full_name || !email) {
       res.status(400).json({
         success: false,
         error: 'Full name and email are required'
+      });
+      return;
+    }
+
+    // Validate rating if provided
+    if (rating !== undefined && (rating < 0 || rating > 5)) {
+      res.status(400).json({
+        success: false,
+        error: 'Rating must be between 0 and 5'
       });
       return;
     }
@@ -209,11 +231,11 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     if (password) {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(password, saltRounds);
-      updateQuery = 'UPDATE users SET full_name = $1, email = $2, password_hash = $3, updated_at = NOW() WHERE id = $4 RETURNING id, username, email, full_name, role, created_at, updated_at';
-      params = [full_name, email, passwordHash, userId];
+      updateQuery = 'UPDATE users SET full_name = $1, email = $2, password_hash = $3, zone = $4, brands = $5, specialty = $6, rating = $7, updated_at = NOW() WHERE id = $8 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at';
+      params = [full_name, email, passwordHash, zone, brands, specialty, rating, userId];
     } else {
-      updateQuery = 'UPDATE users SET full_name = $1, email = $2, updated_at = NOW() WHERE id = $3 RETURNING id, username, email, full_name, role, created_at, updated_at';
-      params = [full_name, email, userId];
+      updateQuery = 'UPDATE users SET full_name = $1, email = $2, zone = $3, brands = $4, specialty = $5, rating = $6, updated_at = NOW() WHERE id = $7 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at';
+      params = [full_name, email, zone, brands, specialty, rating, userId];
     }
 
     const result = await pool.query(updateQuery, params);
@@ -243,7 +265,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const usersResult = await pool.query(
-      'SELECT id, full_name, username, email, role, created_at, updated_at FROM users ORDER BY full_name ASC'
+      'SELECT id, full_name, username, email, role, zone, brands, specialty, rating, created_at, updated_at FROM users ORDER BY full_name ASC'
     );
     res.json({ success: true, data: usersResult.rows });
   } catch (error) {
@@ -255,7 +277,7 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { full_name, email, role, password } = req.body;
+    const { full_name, email, role, password, zone, brands, specialty, rating } = req.body;
     const currentUser = (req as any).user;
 
     // Solo admins pueden editar usuarios
@@ -284,6 +306,15 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
+    // Validate rating if provided
+    if (rating !== undefined && (rating < 0 || rating > 5)) {
+      res.status(400).json({
+        success: false,
+        error: 'Rating must be between 0 and 5'
+      });
+      return;
+    }
+
     // Verificar si el email ya está en uso por otro usuario
     const emailCheck = await pool.query(
       'SELECT id FROM users WHERE email = $1 AND id <> $2',
@@ -303,11 +334,11 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     if (password) {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(password, saltRounds);
-      updateQuery = 'UPDATE users SET full_name = $1, email = $2, role = $3, password_hash = $4, updated_at = NOW() WHERE id = $5 RETURNING id, username, email, full_name, role, created_at, updated_at';
-      params = [full_name, email, role, passwordHash, id];
+      updateQuery = 'UPDATE users SET full_name = $1, email = $2, role = $3, password_hash = $4, zone = $5, brands = $6, specialty = $7, rating = $8, updated_at = NOW() WHERE id = $9 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at';
+      params = [full_name, email, role, passwordHash, zone, brands, specialty, rating, id];
     } else {
-      updateQuery = 'UPDATE users SET full_name = $1, email = $2, role = $3, updated_at = NOW() WHERE id = $4 RETURNING id, username, email, full_name, role, created_at, updated_at';
-      params = [full_name, email, role, id];
+      updateQuery = 'UPDATE users SET full_name = $1, email = $2, role = $3, zone = $4, brands = $5, specialty = $6, rating = $7, updated_at = NOW() WHERE id = $8 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at';
+      params = [full_name, email, role, zone, brands, specialty, rating, id];
     }
 
     const result = await pool.query(updateQuery, params);

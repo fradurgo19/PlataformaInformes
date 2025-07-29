@@ -20,7 +20,15 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
-  updateProfile: (updates: { full_name: string; email: string; password?: string }) => Promise<void>;
+  updateProfile: (updates: { 
+    full_name: string; 
+    email: string; 
+    zone?: string;
+    brands?: string[];
+    specialty?: string;
+    rating?: number;
+    password?: string 
+  }) => Promise<void>;
 }
 
 const initialState: AuthState = {
@@ -113,7 +121,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'UPDATE_USER', payload: user });
   };
 
-  const updateProfile = async (updates: { full_name: string; email: string; password?: string }) => {
+  const updateProfile = async (updates: { 
+    full_name: string; 
+    email: string; 
+    zone?: string;
+    brands?: string[];
+    specialty?: string;
+    rating?: number;
+    password?: string 
+  }) => {
     if (!state.user) throw new Error('No user logged in');
     const response = await apiService.updateProfile(updates);
     if (response.success && response.data) {

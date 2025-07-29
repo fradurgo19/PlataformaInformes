@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
 import { Input } from '../components/atoms/Input';
 import { Button } from '../components/atoms/Button';
+import { Select } from '../components/atoms/Select';
+import { Textarea } from '../components/atoms/Textarea';
 import { useAuth } from '../context/AuthContext';
 
 const ProfilePage: React.FC = () => {
@@ -10,6 +12,10 @@ const ProfilePage: React.FC = () => {
 
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [zone, setZone] = useState(user?.zone || '');
+  const [brands, setBrands] = useState(user?.brands?.join(', ') || '');
+  const [specialty, setSpecialty] = useState(user?.specialty || '');
+  const [rating, setRating] = useState(user?.rating?.toString() || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [success, setSuccess] = useState('');
@@ -28,10 +34,26 @@ const ProfilePage: React.FC = () => {
       setError('Passwords do not match');
       return;
     }
+    
+    // Validar rating
+    const ratingNum = rating ? parseFloat(rating) : undefined;
+    if (ratingNum !== undefined && (ratingNum < 0 || ratingNum > 5)) {
+      setError('Rating must be between 0 and 5');
+      return;
+    }
+    
     setLoading(true);
     try {
-      // updateProfile debe ser implementado en AuthContext
-      await updateProfile({ full_name: fullName, email, password: password || undefined });
+      const brandsArray = brands ? brands.split(',').map(b => b.trim()).filter(b => b) : undefined;
+      await updateProfile({ 
+        full_name: fullName, 
+        email, 
+        zone: zone || undefined,
+        brands: brandsArray,
+        specialty: specialty || undefined,
+        rating: ratingNum,
+        password: password || undefined 
+      });
       setSuccess('Profile updated successfully');
       setPassword('');
       setConfirmPassword('');
@@ -65,6 +87,34 @@ const ProfilePage: React.FC = () => {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
+          />
+          <Input
+            label="Zone"
+            value={zone}
+            onChange={e => setZone(e.target.value)}
+            placeholder="e.g., Bogotá, Medellín"
+          />
+          <Input
+            label="Brands (comma separated)"
+            value={brands}
+            onChange={e => setBrands(e.target.value)}
+            placeholder="e.g., CAT, Komatsu, Hitachi"
+          />
+          <Input
+            label="Specialty"
+            value={specialty}
+            onChange={e => setSpecialty(e.target.value)}
+            placeholder="e.g., Excavadoras, Cargadores"
+          />
+          <Input
+            label="Rating (0-5)"
+            type="number"
+            min="0"
+            max="5"
+            step="0.1"
+            value={rating}
+            onChange={e => setRating(e.target.value)}
+            placeholder="0.0 to 5.0"
           />
           <Input
             label="New Password"
