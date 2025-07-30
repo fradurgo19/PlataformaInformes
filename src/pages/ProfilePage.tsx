@@ -15,7 +15,6 @@ const ProfilePage: React.FC = () => {
   const [zone, setZone] = useState(user?.zone || '');
   const [brands, setBrands] = useState(user?.brands?.join(', ') || '');
   const [specialty, setSpecialty] = useState(user?.specialty || '');
-  const [rating, setRating] = useState(user?.rating?.toString() || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [success, setSuccess] = useState('');
@@ -35,12 +34,7 @@ const ProfilePage: React.FC = () => {
       return;
     }
     
-    // Validar rating
-    const ratingNum = rating ? parseFloat(rating) : undefined;
-    if (ratingNum !== undefined && (ratingNum < 0 || ratingNum > 5)) {
-      setError('Rating must be between 0 and 5');
-      return;
-    }
+
     
     setLoading(true);
     try {
@@ -51,7 +45,6 @@ const ProfilePage: React.FC = () => {
         zone: zone || undefined,
         brands: brandsArray,
         specialty: specialty || undefined,
-        rating: ratingNum,
         password: password || undefined 
       });
       setSuccess('Profile updated successfully');
@@ -105,16 +98,6 @@ const ProfilePage: React.FC = () => {
             value={specialty}
             onChange={e => setSpecialty(e.target.value)}
             placeholder="e.g., Excavadoras, Cargadores"
-          />
-          <Input
-            label="Rating (0-5)"
-            type="number"
-            min="0"
-            max="5"
-            step="0.1"
-            value={rating}
-            onChange={e => setRating(e.target.value)}
-            placeholder="0.0 to 5.0"
           />
           <Input
             label="New Password"
