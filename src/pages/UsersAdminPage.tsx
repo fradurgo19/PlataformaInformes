@@ -33,6 +33,7 @@ export const UsersAdminPage: React.FC = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -77,6 +78,7 @@ export const UsersAdminPage: React.FC = () => {
     setForm(initialForm);
     setEditId(null);
     setError(null);
+    setSuccess(null);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -99,6 +101,22 @@ export const UsersAdminPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
+    
+    // Validaciones
+    if (!form.full_name || !form.email || !form.username || !form.password || !form.role) {
+      setError('All fields are required');
+      setLoading(false);
+      return;
+    }
+
+    // Validar rating si se proporciona
+    if (form.rating !== undefined && (form.rating < 0 || form.rating > 5)) {
+      setError('Rating must be between 0 and 5');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await apiService.register({
         username: form.username,
@@ -112,13 +130,16 @@ export const UsersAdminPage: React.FC = () => {
         rating: form.rating,
       });
       if (res.success) {
+        setSuccess('User created successfully');
         fetchUsers();
-        handleCloseModal();
+        setTimeout(() => {
+          handleCloseModal();
+        }, 1500);
       } else {
         setError(res.error || 'Error creating user');
       }
-    } catch (e) {
-      setError('Error creating user');
+    } catch (e: any) {
+      setError(e.message || 'Error creating user');
     } finally {
       setLoading(false);
     }
@@ -128,9 +149,50 @@ export const UsersAdminPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
+    
+    // Validaciones
+    if (!form.full_name || !form.email || !form.role) {
+      setError('Full name, email and role are required');
+      setLoading(false);
+      return;
+    }
+
+    // Validar rating si se proporciona
+    if (form.rating !== undefined && (form.rating < 0 || form.rating > 5)) {
+      setError('Rating must be between 0 and 5');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Implementar endpoint de edición en el backend si es necesario
-      setError('Funcionalidad de edición aún no implementada');
+      if (!editId) {
+        setError('No user selected for editing');
+        return;
+      }
+
+      const res = await apiService.updateUser(editId, {
+        full_name: form.full_name,
+        email: form.email,
+        role: form.role,
+        zone: form.zone || undefined,
+        brands: form.brands.length > 0 ? form.brands : undefined,
+        specialty: form.specialty || undefined,
+        rating: form.rating,
+        password: form.password || undefined,
+      });
+      
+      if (res.success) {
+        setSuccess('User updated successfully');
+        fetchUsers();
+        setTimeout(() => {
+          handleCloseModal();
+        }, 1500);
+      } else {
+        setError(res.error || 'Error updating user');
+      }
+    } catch (e: any) {
+      setError(e.message || 'Error updating user');
     } finally {
       setLoading(false);
     }
@@ -215,6 +277,7 @@ export const UsersAdminPage: React.FC = () => {
               <Input name="specialty" value={form.specialty} onChange={handleChange} placeholder="Specialty (e.g., Excavators, Loaders)" />
               <Input name="rating" type="number" min="0" max="5" step="0.1" value={form.rating?.toString() || ''} onChange={handleChange} placeholder="Rating (0-5)" />
               {error && <div className="text-red-600 text-sm">{error}</div>}
+              {success && <div className="text-green-600 text-sm">{success}</div>}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>
                 <Button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create'}</Button>
@@ -237,6 +300,7 @@ export const UsersAdminPage: React.FC = () => {
               <Input name="specialty" value={form.specialty} onChange={handleChange} placeholder="Specialty (e.g., Excavators, Loaders)" />
               <Input name="rating" type="number" min="0" max="5" step="0.1" value={form.rating?.toString() || ''} onChange={handleChange} placeholder="Rating (0-5)" />
               {error && <div className="text-red-600 text-sm">{error}</div>}
+              {success && <div className="text-green-600 text-sm">{success}</div>}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>
                 <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button>

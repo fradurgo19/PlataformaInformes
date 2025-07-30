@@ -474,6 +474,24 @@ class ApiService {
     });
     return this.handleResponse<Parameter>(response);
   }
+
+  async updateUser(id: string, userData: { 
+    full_name: string; 
+    email: string; 
+    role: string;
+    zone?: string;
+    brands?: string[];
+    specialty?: string;
+    rating?: number;
+    password?: string;
+  }): Promise<ApiResponse<User>> {
+    const response = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(userData),
+    });
+    return this.handleResponse<User>(response);
+  }
 }
 
 export const apiService = new ApiService();
