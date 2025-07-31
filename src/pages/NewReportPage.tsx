@@ -1095,7 +1095,19 @@ export const NewReportPage: React.FC = () => {
       navigate('/reports');
     } catch (error) {
       console.error('Error saving report:', error);
-      setErrors({ submit: 'Error saving report' });
+      
+      // Handle specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('not authorized') || error.message.includes('not found')) {
+          setErrors({ submit: 'You are not authorized to edit this report or the report was not found.' });
+        } else if (error.message.includes('CLOSED')) {
+          setErrors({ submit: 'This report is closed and cannot be edited.' });
+        } else {
+          setErrors({ submit: `Error saving report: ${error.message}` });
+        }
+      } else {
+        setErrors({ submit: 'Error saving report. Please try again.' });
+      }
     }
   };
 
