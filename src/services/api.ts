@@ -475,6 +475,25 @@ class ApiService {
     return this.handleResponse<Parameter>(response);
   }
 
+  async bulkImportParameters(data: { csvData: string }): Promise<ApiResponse<{
+    totalProcessed: number;
+    successCount: number;
+    errorCount: number;
+    errors?: string[];
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/parameters/bulk-import`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<{
+      totalProcessed: number;
+      successCount: number;
+      errorCount: number;
+      errors?: string[];
+    }>(response);
+  }
+
   async updateUser(id: string, userData: { 
     full_name: string; 
     email: string; 

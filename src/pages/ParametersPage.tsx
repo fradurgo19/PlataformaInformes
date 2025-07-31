@@ -5,6 +5,7 @@ import { Button } from '../components/atoms/Button';
 import { Input } from '../components/atoms/Input';
 import { Parameter } from '../types';
 import { apiService } from '../services/api';
+import { BulkImportParameters } from '../components/molecules/BulkImportParameters';
 
 export const ParametersPage: React.FC = () => {
   const { state: authState } = useAuth();
@@ -84,65 +85,71 @@ export const ParametersPage: React.FC = () => {
         <p className="text-slate-600 mb-8">Access technical parameters by model. Admins can add new parameters.</p>
 
         {authState.user?.role === 'admin' && (
-          <div className="mb-8 bg-white p-6 rounded-lg shadow border border-slate-200 max-w-xl">
-            <h2 className="text-xl font-semibold mb-4">Add New Parameter</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label="Parameter"
-                name="parameter"
-                value={form.parameter}
-                onChange={handleInputChange}
-                placeholder="E.g. Oil Pressure"
-                required
-              />
-              <Input
-                label="Parameter Type"
-                name="parameter_type"
-                value={form.parameter_type}
-                onChange={handleInputChange}
-                placeholder="E.g. Sensor"
-                required
-              />
-              <Input
-                label="Model"
-                name="model"
-                value={form.model}
-                onChange={handleInputChange}
-                placeholder="E.g. CATERPILLAR 320D"
-                required
-              />
-              <Input
-                label="Minimum Range"
-                name="min_range"
-                type="number"
-                value={form.min_range}
-                onChange={handleInputChange}
-                placeholder="E.g. 10"
-                required
-              />
-              <Input
-                label="Maximum Range"
-                name="max_range"
-                type="number"
-                value={form.max_range}
-                onChange={handleInputChange}
-                placeholder="E.g. 100"
-                required
-              />
-              <Input
-                label="Resource URL"
-                name="resource_url"
-                value={form.resource_url}
-                onChange={handleInputChange}
-                placeholder="https://..."
-                required
-              />
-              {formError && <div className="text-red-600 text-sm">{formError}</div>}
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Saving...' : 'Add Parameter'}
-              </Button>
-            </form>
-          </div>
+          <>
+            <div className="mb-8 bg-white p-6 rounded-lg shadow border border-slate-200 max-w-xl">
+              <h2 className="text-xl font-semibold mb-4">Add New Parameter</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Input
+                  label="Parameter"
+                  name="parameter"
+                  value={form.parameter}
+                  onChange={handleInputChange}
+                  placeholder="E.g. Oil Pressure"
+                  required
+                />
+                <Input
+                  label="Parameter Type"
+                  name="parameter_type"
+                  value={form.parameter_type}
+                  onChange={handleInputChange}
+                  placeholder="E.g. Sensor"
+                  required
+                />
+                <Input
+                  label="Model"
+                  name="model"
+                  value={form.model}
+                  onChange={handleInputChange}
+                  placeholder="E.g. CATERPILLAR 320D"
+                  required
+                />
+                <Input
+                  label="Minimum Range"
+                  name="min_range"
+                  type="number"
+                  value={form.min_range}
+                  onChange={handleInputChange}
+                  placeholder="E.g. 10"
+                  required
+                />
+                <Input
+                  label="Maximum Range"
+                  name="max_range"
+                  type="number"
+                  value={form.max_range}
+                  onChange={handleInputChange}
+                  placeholder="E.g. 100"
+                  required
+                />
+                <Input
+                  label="Resource URL"
+                  name="resource_url"
+                  value={form.resource_url}
+                  onChange={handleInputChange}
+                  placeholder="https://..."
+                  required
+                />
+                {formError && <div className="text-red-600 text-sm">{formError}</div>}
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? 'Saving...' : 'Add Parameter'}
+                </Button>
+              </form>
+            </div>
+
+            <div className="mb-8">
+              <BulkImportParameters onImportSuccess={fetchParameters} />
+            </div>
+          </>
         )}
 
         <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
