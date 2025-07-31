@@ -887,6 +887,7 @@ export const NewReportPage: React.FC = () => {
       newErrors.hourmeter = 'Hourmeter must be a valid number';
     }
     if (!reportData.ott) newErrors.ott = 'OTT is required';
+    if (!reportData.reasonOfService) newErrors.reasonOfService = 'Reason of service is required';
 
     // Step 2 validation
     if (components.length === 0) {
@@ -930,6 +931,7 @@ export const NewReportPage: React.FC = () => {
         newErrors.hourmeter = 'Hourmeter must be a valid number';
       }
       if (!reportData.ott) newErrors.ott = 'OTT is required';
+      if (!reportData.reasonOfService) newErrors.reasonOfService = 'Reason of service is required';
     } else if (step === 2) {
       if (components.length === 0) {
         newErrors.components = 'At least one component assessment is required';
@@ -1200,8 +1202,10 @@ export const NewReportPage: React.FC = () => {
               label="Reason of Service"
               value={reportData.reasonOfService}
               onChange={(e) => setReportData(prev => ({ ...prev, reasonOfService: e.target.value }))}
+              error={errors.reasonOfService}
               placeholder="Enter the reason for the service"
               rows={4}
+              required
             />
           </div>
         </div>
