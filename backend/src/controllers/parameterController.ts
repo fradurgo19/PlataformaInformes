@@ -83,9 +83,16 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
                 }
                 
                 // Validate required fields (observation is optional)
-                if (!row.parameter || !row.parameter_type || !row.model || 
-                    row.min_range === undefined || row.max_range === undefined || !row.resource_url) {
-                  errors.push(`Row ${rowNumber}: Missing required fields`);
+                const missingFields = [];
+                if (!row.parameter) missingFields.push('parameter');
+                if (!row.parameter_type) missingFields.push('parameter_type');
+                if (!row.model) missingFields.push('model');
+                if (row.min_range === undefined) missingFields.push('min_range');
+                if (row.max_range === undefined) missingFields.push('max_range');
+                if (!row.resource_url) missingFields.push('resource_url');
+                
+                if (missingFields.length > 0) {
+                  errors.push(`Row ${rowNumber}: Missing required fields: ${missingFields.join(', ')}`);
                   errorCount++;
                   continue;
                 }
