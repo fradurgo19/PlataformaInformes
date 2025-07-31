@@ -1194,11 +1194,8 @@ export const NewReportPage: React.FC = () => {
               required
             />
           </div>
-        </div>
-        
-        {/* Reason of Service - Full width */}
-        <div className="mt-6">
-          <div className="space-y-2 border border-gray-200 p-2 rounded">
+          
+          <div className="space-y-2 min-h-[80px] border border-gray-200 p-2 rounded">
             <Textarea
               label="Reason of Service"
               value={reportData.reasonOfService}
