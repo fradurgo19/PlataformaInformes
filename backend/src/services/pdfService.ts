@@ -164,6 +164,11 @@ export class PDFService {
             <div class="info-item">
               <strong>OTT:</strong><br>${report.ott || 'No especificado'}
             </div>
+            ${report.reason_of_service ? `
+            <div class="info-item">
+              <strong>Razón del Servicio / Reason of Service:</strong><br>${report.reason_of_service}
+            </div>
+            ` : ''}
             <div class="info-item">
               <strong>Estado / Status:</strong><br>
               <span class="status-badge" style="background-color: ${report.general_status === 'CLOSED' ? '#fee2e2' : '#fef9c3'}; color: ${report.general_status === 'CLOSED' ? '#b91c1c' : '#92400e'};">${report.general_status ? report.general_status.toUpperCase() : 'N/A'}</span>

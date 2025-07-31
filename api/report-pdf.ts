@@ -34,7 +34,14 @@ export default async function handler(req: any, res: any) {
     page.drawText(`Serie: ${report.serial_number || ''}`, { x: 50, y, size: 12, font });
     y -= 18;
     page.drawText(`Fecha: ${report.report_date ? new Date(report.report_date).toLocaleDateString() : ''}`, { x: 50, y, size: 12, font });
-    y -= 24;
+    y -= 18;
+    page.drawText(`OTT: ${report.ott || ''}`, { x: 50, y, size: 12, font });
+    y -= 18;
+    if (report.reason_of_service) {
+      page.drawText(`Razón del Servicio: ${report.reason_of_service}`, { x: 50, y, size: 12, font });
+      y -= 18;
+    }
+    y -= 6;
 
     // Componentes
     page.drawText('Componentes:', { x: 50, y, size: 14, font });
