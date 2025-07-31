@@ -196,7 +196,7 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
     }
 
     // Send response
-    res.json({
+    return res.json({
       success: true,
       data: {
         totalProcessed: results.length,
