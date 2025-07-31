@@ -17,12 +17,12 @@ export const addParameter = async (req: AuthRequest, res: Response) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ success: false, error: 'Only admin can add parameters' });
   }
-  const { parameter, parameter_type, model, min_range, max_range, resource_url } = req.body;
+  const { parameter, parameter_type, model, min_range, max_range, resource_url, observation } = req.body;
   if (!parameter || !parameter_type || !model || min_range === undefined || max_range === undefined || !resource_url) {
     return res.status(400).json({ success: false, error: 'Missing required fields' });
   }
   try {
-    const param = await createParameter({ parameter, parameter_type, model, min_range, max_range, resource_url });
+    const param = await createParameter({ parameter, parameter_type, model, min_range, max_range, resource_url, observation });
     return res.json({ success: true, data: param });
   } catch (error) {
     return res.status(500).json({ success: false, error: 'Error creating parameter' });
@@ -107,7 +107,8 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
                   model: row.model.trim(),
                   min_range: minRange,
                   max_range: maxRange,
-                  resource_url: row.resource_url.trim()
+                  resource_url: row.resource_url.trim(),
+                  observation: row.observation ? row.observation.trim() : ''
                 });
                 
                 successCount++;

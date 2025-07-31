@@ -53,6 +53,7 @@ export interface Parameter {
   min_range: number;
   max_range: number;
   resource_url: string;
+  observation?: string;
   created_at: string;
   updated_at: string;
 }

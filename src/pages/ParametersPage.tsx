@@ -12,7 +12,7 @@ export const ParametersPage: React.FC = () => {
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', resource_url: '' });
+  const [form, setForm] = useState({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', resource_url: '', observation: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
@@ -58,9 +58,10 @@ export const ParametersPage: React.FC = () => {
         min_range: parseFloat(form.min_range),
         max_range: parseFloat(form.max_range),
         resource_url: form.resource_url,
+        observation: form.observation,
       });
       if (data.success) {
-        setForm({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', resource_url: '' });
+        setForm({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', resource_url: '', observation: '' });
         fetchParameters();
       } else {
         setFormError(data.error || 'Error creating parameter');
@@ -139,6 +140,13 @@ export const ParametersPage: React.FC = () => {
                   placeholder="https://..."
                   required
                 />
+                <Input
+                  label="Observation"
+                  name="observation"
+                  value={form.observation}
+                  onChange={handleInputChange}
+                  placeholder="Additional notes or observations..."
+                />
                 {formError && <div className="text-red-600 text-sm">{formError}</div>}
                 <Button type="submit" disabled={submitting}>
                   {submitting ? 'Saving...' : 'Add Parameter'}
@@ -178,6 +186,7 @@ export const ParametersPage: React.FC = () => {
                     <th className="border px-2 py-1">Minimum Range</th>
                     <th className="border px-2 py-1">Maximum Range</th>
                     <th className="border px-2 py-1">Resource</th>
+                    <th className="border px-2 py-1">Observation</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -193,11 +202,14 @@ export const ParametersPage: React.FC = () => {
                           View Resource
                         </a>
                       </td>
+                      <td className="border px-2 py-1 max-w-xs truncate" title={p.observation}>
+                        {p.observation || '-'}
+                      </td>
                     </tr>
                   ))}
                   {filteredParameters.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center text-slate-400 py-4">No parameters found</td>
+                      <td colSpan={7} className="text-center text-slate-400 py-4">No parameters found</td>
                     </tr>
                   )}
                 </tbody>

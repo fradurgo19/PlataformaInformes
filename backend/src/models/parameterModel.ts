@@ -8,6 +8,7 @@ export interface Parameter {
   min_range: number;
   max_range: number;
   resource_url: string;
+  observation?: string;
   created_at: string;
   updated_at: string;
 }
@@ -17,10 +18,10 @@ export const getAllParameters = async (): Promise<Parameter[]> => {
   return result.rows;
 };
 
-export const createParameter = async (data: { parameter: string; parameter_type: string; model: string; min_range: number; max_range: number; resource_url: string }): Promise<Parameter> => {
+export const createParameter = async (data: { parameter: string; parameter_type: string; model: string; min_range: number; max_range: number; resource_url: string; observation?: string }): Promise<Parameter> => {
   const result = await pool.query(
-    'INSERT INTO parameters (parameter, parameter_type, model, min_range, max_range, resource_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [data.parameter, data.parameter_type, data.model, data.min_range, data.max_range, data.resource_url]
+    'INSERT INTO parameters (parameter, parameter_type, model, min_range, max_range, resource_url, observation) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+    [data.parameter, data.parameter_type, data.model, data.min_range, data.max_range, data.resource_url, data.observation || '']
   );
   return result.rows[0];
 };
