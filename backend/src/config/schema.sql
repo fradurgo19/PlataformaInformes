@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS reports (
     hourmeter INTEGER NOT NULL,
     report_date DATE NOT NULL,
     ott VARCHAR(255),
+    reason_of_service TEXT,
     conclusions TEXT,
     overall_suggestions TEXT,
     status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'completed', 'archived')),

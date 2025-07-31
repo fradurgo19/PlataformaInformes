@@ -291,6 +291,16 @@ export const ReportViewPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                
+                {/* Reason of Service */}
+                {report.reason_of_service && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-medium text-slate-600 mb-2">Reason of Service</h3>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <p className="text-slate-900 whitespace-pre-wrap">{report.reason_of_service}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Components */}

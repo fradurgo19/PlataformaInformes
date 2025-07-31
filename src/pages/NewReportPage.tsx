@@ -43,6 +43,7 @@ export const NewReportPage: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     location: '',
     ott: '',
+    reasonOfService: '',
     conclusions: '',
     overallSuggestions: '',
   });
@@ -818,6 +819,7 @@ export const NewReportPage: React.FC = () => {
         date: r.report_date ? new Date(r.report_date).toISOString().split('T')[0] : '',
         location: '',
         ott: r.ott || '',
+        reasonOfService: r.reason_of_service || '',
         conclusions: r.conclusions || '',
         overallSuggestions: r.overall_suggestions || '',
       });
@@ -1044,6 +1046,7 @@ export const NewReportPage: React.FC = () => {
         hourmeter: Number(reportData.hourmeter),
         report_date: reportData.date,
         ott: reportData.ott,
+        reason_of_service: reportData.reasonOfService,
         conclusions: reportData.conclusions,
         overall_suggestions: reportData.overallSuggestions,
         status: isEditMode ? (reportResponse?.data?.status || 'draft') : 'draft',
@@ -1189,6 +1192,19 @@ export const NewReportPage: React.FC = () => {
               error={errors.ott}
               placeholder="Enter OTT"
               required
+            />
+          </div>
+        </div>
+        
+        {/* Reason of Service - Full width */}
+        <div className="mt-6">
+          <div className="space-y-2 border border-gray-200 p-2 rounded">
+            <Textarea
+              label="Reason of Service"
+              value={reportData.reasonOfService}
+              onChange={(e) => setReportData(prev => ({ ...prev, reasonOfService: e.target.value }))}
+              placeholder="Enter the reason for the service"
+              rows={4}
             />
           </div>
         </div>

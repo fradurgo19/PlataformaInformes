@@ -28,8 +28,8 @@ export const createReport = async (req: Request, res: Response) => {
     const reportResult = await client.query(
       `INSERT INTO reports (
         user_id, client_name, machine_type, model, serial_number, 
-        hourmeter, report_date, ott, conclusions, overall_suggestions, general_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+        hourmeter, report_date, ott, reason_of_service, conclusions, overall_suggestions, general_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
       RETURNING *`,
       [
         userId,
@@ -40,6 +40,7 @@ export const createReport = async (req: Request, res: Response) => {
         reportData.hourmeter,
         reportData.report_date,
         reportData.ott,
+        reportData.reason_of_service || null,
         reportData.conclusions || null,
         reportData.overall_suggestions || null,
         reportData.general_status || 'PENDING'
@@ -398,13 +399,13 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
     const updatedReportResult = await client.query(
       `UPDATE reports SET 
         client_name = $1, machine_type = $2, model = $3, serial_number = $4,
-        hourmeter = $5, report_date = $6, ott = $7, conclusions = $8,
-        overall_suggestions = $9, status = $10, general_status = COALESCE($11, general_status)
-      WHERE id = $12 AND user_id = $13 RETURNING *`,
+        hourmeter = $5, report_date = $6, ott = $7, reason_of_service = $8, conclusions = $9,
+        overall_suggestions = $10, status = $11, general_status = COALESCE($12, general_status)
+      WHERE id = $13 AND user_id = $14 RETURNING *`,
       [
         reportData.client_name, reportData.machine_type, reportData.model,
         reportData.serial_number, reportData.hourmeter, reportData.report_date,
-        reportData.ott, reportData.conclusions, reportData.overall_suggestions,
+        reportData.ott, reportData.reason_of_service, reportData.conclusions, reportData.overall_suggestions,
         reportData.status, reportData.general_status, reportId, userId,
       ]
     );

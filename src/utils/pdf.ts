@@ -30,6 +30,15 @@ export const generateReportPDF = async (report: Report, elementId?: string): Pro
     yPosition += 8;
     pdf.text(`Date: ${format(report.report_date, 'PPP')}`, margin, yPosition);
     yPosition += 8;
+    pdf.text(`OTT: ${report.ott}`, margin, yPosition);
+    yPosition += 8;
+    
+    // Reason of Service
+    if (report.reason_of_service) {
+      const reasonOfServiceLines = pdf.splitTextToSize(`Reason of Service: ${report.reason_of_service}`, pageWidth - 2 * margin);
+      pdf.text(reasonOfServiceLines, margin, yPosition);
+      yPosition += reasonOfServiceLines.length * 6 + 8;
+    }
 
     // Components
     if (report.components && report.components.length > 0) {

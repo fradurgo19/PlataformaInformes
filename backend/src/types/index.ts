@@ -22,6 +22,7 @@ export interface Report {
   hourmeter: number;
   report_date: string;
   ott: string;
+  reason_of_service?: string;
   conclusions?: string;
   overall_suggestions?: string;
   status: 'draft' | 'completed' | 'archived';
@@ -112,6 +113,7 @@ export interface CreateReportRequest {
   hourmeter: number;
   report_date: string;
   ott: string;
+  reason_of_service?: string;
   conclusions?: string;
   overall_suggestions?: string;
   components: Omit<Component, 'id' | 'report_id' | 'created_at' | 'updated_at'>[];
