@@ -6,7 +6,8 @@ const ALLOWED_MIME_TYPES = [
   'image/jpg',
   'image/png',
   'image/gif',
-  'image/webp'
+  'image/webp',
+  'image/svg+xml'
 ];
 
 // Tamaño máximo de archivo (10MB)
@@ -47,7 +48,7 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
       }
 
       // Validar extensión
-      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
       const fileExtension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
       if (!allowedExtensions.includes(fileExtension)) {
         return res.status(400).json({
