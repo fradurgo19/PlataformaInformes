@@ -76,11 +76,15 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
         
         // Skip header row and convert to objects
         const headers = jsonData[0] as string[];
+        console.log('Excel headers:', headers);
+        
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i] as any[];
           const rowObj: any = {};
           headers.forEach((header, index) => {
-            rowObj[header] = row[index];
+            // Clean header name and handle special characters
+            const cleanHeader = header ? header.toString().trim() : '';
+            rowObj[cleanHeader] = row[index];
           });
           results.push(rowObj);
         }
@@ -124,8 +128,21 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
       try {
         // Debug: Log the first row to see what columns are available
         if (i === 0) {
+          console.log('=== DEBUG INFO ===');
+          console.log('File type:', fileType);
           console.log('First row columns:', Object.keys(row));
           console.log('First row data:', row);
+          console.log('Row keys:', Object.keys(row));
+          console.log('Row values:', Object.values(row));
+          console.log('Has parameter_t model:', !!row['parameter_t model']);
+          console.log('Has parameter:', !!row.parameter);
+          console.log('Has parameter_type:', !!row.parameter_type);
+          console.log('Has model:', !!row.model);
+          console.log('Has min_range:', !!row.min_range);
+          console.log('Has max_range:', !!row.max_range);
+          console.log('Has resource_url:', !!row.resource_url);
+          console.log('Has observation:', !!row.observation);
+          console.log('==================');
         }
         
         // Handle combined parameter_t model column
