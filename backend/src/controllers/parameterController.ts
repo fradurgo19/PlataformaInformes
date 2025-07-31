@@ -179,8 +179,8 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
         }
 
         // Validate numeric fields
-        const minRange = parseFloat(row.min_range);
-        const maxRange = parseFloat(row.max_range);
+        let minRange = parseFloat(row.min_range);
+        let maxRange = parseFloat(row.max_range);
         
         if (isNaN(minRange) || isNaN(maxRange)) {
           errors.push(`Row ${rowNumber}: Invalid numeric values for ranges`);
@@ -188,8 +188,17 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
           continue;
         }
 
-        if (minRange >= maxRange) {
-          errors.push(`Row ${rowNumber}: Minimum range must be less than maximum range`);
+        // Auto-fix: If min_range is greater than max_range, swap them
+        if (minRange > maxRange) {
+          const temp = minRange;
+          minRange = maxRange;
+          maxRange = temp;
+          console.log(`Row ${rowNumber}: Auto-swapped ranges: min=${minRange}, max=${maxRange}`);
+        }
+
+        // Still validate that they're not equal
+        if (minRange === maxRange) {
+          errors.push(`Row ${rowNumber}: Minimum range (${minRange}) cannot be equal to maximum range (${maxRange})`);
           errorCount++;
           continue;
         }
