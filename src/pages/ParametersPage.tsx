@@ -16,6 +16,7 @@ export const ParametersPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchParameters = async () => {
     setLoading(true);
@@ -78,6 +79,26 @@ export const ParametersPage: React.FC = () => {
     p.model.toLowerCase().includes(search.toLowerCase()) ||
     p.parameter.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleDeleteParameter = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this parameter? This action cannot be undone.')) {
+      return;
+    }
+    
+    setDeletingId(id);
+    try {
+      const data = await apiService.deleteParameter(id);
+      if (data.success) {
+        fetchParameters();
+      } else {
+        alert(data.error || 'Error deleting parameter');
+      }
+    } catch (err) {
+      alert('Error deleting parameter');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -187,6 +208,9 @@ export const ParametersPage: React.FC = () => {
                     <th className="border px-2 py-1">Maximum Range</th>
                     <th className="border px-2 py-1">Resource</th>
                     <th className="border px-2 py-1">Observation</th>
+                    {authState.user?.role === 'admin' && (
+                      <th className="border px-2 py-1">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -205,11 +229,22 @@ export const ParametersPage: React.FC = () => {
                       <td className="border px-2 py-1 max-w-xs truncate" title={p.observation}>
                         {p.observation || '-'}
                       </td>
+                      {authState.user?.role === 'admin' && (
+                        <td className="border px-2 py-1">
+                          <Button
+                            onClick={() => handleDeleteParameter(p.id)}
+                            disabled={deletingId === p.id}
+                            className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs"
+                          >
+                            {deletingId === p.id ? 'Deleting...' : 'Delete'}
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {filteredParameters.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-center text-slate-400 py-4">No parameters found</td>
+                      <td colSpan={authState.user?.role === 'admin' ? 8 : 7} className="text-center text-slate-400 py-4">No parameters found</td>
                     </tr>
                   )}
                 </tbody>

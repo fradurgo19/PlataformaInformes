@@ -494,6 +494,14 @@ class ApiService {
     }>(response);
   }
 
+  async deleteParameter(id: string): Promise<ApiResponse<boolean>> {
+    const response = await fetch(`${API_BASE_URL}/parameters/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<boolean>(response);
+  }
+
   async updateUser(id: string, userData: { 
     full_name: string; 
     email: string; 
