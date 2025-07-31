@@ -475,7 +475,7 @@ class ApiService {
     return this.handleResponse<Parameter>(response);
   }
 
-  async bulkImportParameters(data: { csvData: string }): Promise<ApiResponse<{
+  async bulkImportParameters(data: { csvData: string; legacyFormat?: boolean }): Promise<ApiResponse<{
     totalProcessed: number;
     successCount: number;
     errorCount: number;

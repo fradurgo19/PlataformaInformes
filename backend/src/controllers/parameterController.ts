@@ -48,7 +48,7 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const { csvData } = req.body;
+    const { csvData, legacyFormat = false } = req.body;
     
     if (!csvData) {
       return res.status(400).json({ success: false, error: 'CSV data is required' });
@@ -121,7 +121,7 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
                   min_range: minRange,
                   max_range: maxRange,
                   resource_url: row.resource_url.trim(),
-                  observation: row.observation ? row.observation.trim() : ''
+                  observation: legacyFormat ? '' : (row.observation ? row.observation.trim() : '')
                 });
                 
                 successCount++;

@@ -37,7 +37,14 @@ export const BulkImportParameters: React.FC<BulkImportParametersProps> = ({ onIm
     try {
       const csvData = await file.text();
       
-      const response = await apiService.bulkImportParameters({ csvData });
+      // Check if CSV has the new format (with observation column)
+      const firstLine = csvData.split('\n')[0];
+      const hasObservationColumn = firstLine.includes('observation');
+      
+      const response = await apiService.bulkImportParameters({ 
+        csvData,
+        legacyFormat: !hasObservationColumn 
+      });
       
       if (response.success && response.data) {
         setImportResult(response.data);
