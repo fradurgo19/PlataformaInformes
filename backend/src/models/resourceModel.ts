@@ -5,6 +5,7 @@ export interface Resource {
   model: string;
   resource_name: string;
   resource_url: string;
+  observation?: string;
   created_at: string;
   updated_at: string;
 }
@@ -14,10 +15,10 @@ export const getAllResources = async (): Promise<Resource[]> => {
   return result.rows;
 };
 
-export const createResource = async (data: { model: string; resource_name: string; resource_url: string }): Promise<Resource> => {
+export const createResource = async (data: { model: string; resource_name: string; resource_url: string; observation?: string }): Promise<Resource> => {
   const result = await pool.query(
-    'INSERT INTO resources (model, resource_name, resource_url) VALUES ($1, $2, $3) RETURNING *',
-    [data.model, data.resource_name, data.resource_url]
+    'INSERT INTO resources (model, resource_name, resource_url, observation) VALUES ($1, $2, $3, $4) RETURNING *',
+    [data.model, data.resource_name, data.resource_url, data.observation || '']
   );
   return result.rows[0];
 };

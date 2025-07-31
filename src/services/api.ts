@@ -449,13 +449,40 @@ class ApiService {
     return this.handleResponse<Resource[]>(response);
   }
 
-  async createResource(data: { model: string; resource_name: string; resource_url: string }): Promise<ApiResponse<Resource>> {
+  async createResource(data: { model: string; resource_name: string; resource_url: string; observation?: string }): Promise<ApiResponse<Resource>> {
     const response = await fetch(`${API_BASE_URL}/resources`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
     return this.handleResponse<Resource>(response);
+  }
+
+  async bulkImportResources(data: { csvData?: string; excelData?: string; fileType?: string; legacyFormat?: boolean }): Promise<ApiResponse<{
+    totalProcessed: number;
+    successCount: number;
+    errorCount: number;
+    errors?: string[];
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/resources/bulk-import`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<{
+      totalProcessed: number;
+      successCount: number;
+      errorCount: number;
+      errors?: string[];
+    }>(response);
+  }
+
+  async deleteResource(id: string): Promise<ApiResponse<boolean>> {
+    const response = await fetch(`${API_BASE_URL}/resources/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<boolean>(response);
   }
 
   async getParameters(): Promise<ApiResponse<Parameter[]>> {

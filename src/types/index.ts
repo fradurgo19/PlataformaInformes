@@ -182,6 +182,7 @@ export interface Resource {
   model: string;
   resource_name: string;
   resource_url: string;
+  observation?: string;
   created_at: string;
   updated_at: string;
 }
