@@ -76,7 +76,13 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
               const rowNumber = i + 2; // +2 because CSV starts at row 2 (header is row 1)
               
               try {
-                // Validate required fields
+                // Debug: Log the first row to see what columns are available
+                if (i === 0) {
+                  console.log('First row columns:', Object.keys(row));
+                  console.log('First row data:', row);
+                }
+                
+                // Validate required fields (observation is optional)
                 if (!row.parameter || !row.parameter_type || !row.model || 
                     row.min_range === undefined || row.max_range === undefined || !row.resource_url) {
                   errors.push(`Row ${rowNumber}: Missing required fields`);
