@@ -370,30 +370,49 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
   
   try {
     const reportId = req.params.id;
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+    
     // Verificar estado actual
-    const { rows } = await client.query('SELECT general_status FROM reports WHERE id = $1', [reportId]);
+    const { rows } = await client.query('SELECT general_status, user_id FROM reports WHERE id = $1', [reportId]);
     if (!rows[0]) {
       res.status(404).json({ success: false, error: 'Report not found' });
       return;
     }
+    
     if (rows[0].general_status === 'CLOSED') {
       res.status(403).json({ success: false, error: 'Report is CLOSED and cannot be edited' });
       return;
     }
-    await client.query('BEGIN');
-    
-    const userId = (req as any).user.id;
+
+    // Check if user is admin or owner of the report
+    const reportOwnerId = rows[0].user_id;
+    const isOwner = userId === reportOwnerId;
+    const isAdmin = userRole === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      res.status(403).json({ success: false, error: 'You are not authorized to edit this report' });
+      return;
+    }
+
     const reportDataRaw = req.body.reportData;
     if (!reportDataRaw) {
-      throw new Error('Missing reportData in request');
+      res.status(400).json({ success: false, error: 'Missing reportData in request' });
+      return;
     }
+    
     let reportData;
     try {
       reportData = JSON.parse(reportDataRaw);
     } catch (err) {
-      throw new Error('Invalid JSON in reportData');
+      res.status(400).json({ success: false, error: 'Invalid JSON in reportData' });
+      return;
     }
+    
     const files = req.files as Express.Multer.File[];
+
+    // Start transaction after all validations
+    await client.query('BEGIN');
 
     // 1. Update the main report details
     const updatedReportResult = await client.query(
@@ -401,17 +420,17 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
         client_name = $1, machine_type = $2, model = $3, serial_number = $4,
         hourmeter = $5, report_date = $6, ott = $7, reason_of_service = $8, conclusions = $9,
         overall_suggestions = $10, status = $11, general_status = COALESCE($12, general_status)
-      WHERE id = $13 AND user_id = $14 RETURNING *`,
+      WHERE id = $13 RETURNING *`,
       [
         reportData.client_name, reportData.machine_type, reportData.model,
         reportData.serial_number, reportData.hourmeter, reportData.report_date,
         reportData.ott, reportData.reason_of_service, reportData.conclusions, reportData.overall_suggestions,
-        reportData.status, reportData.general_status, reportId, userId,
+        reportData.status, reportData.general_status, reportId,
       ]
     );
 
     if (updatedReportResult.rows.length === 0) {
-      throw new Error('Report not found or user not authorized.');
+      throw new Error('Failed to update report.');
     }
 
     // --- Components and Photos Synchronization ---
@@ -488,7 +507,17 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Update report error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('not found') || error.message.includes('not authorized')) {
+        res.status(404).json({ success: false, error: error.message });
+      } else {
+        res.status(500).json({ success: false, error: 'Internal server error' });
+      }
+    } else {
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
   } finally {
     client.release();
   }

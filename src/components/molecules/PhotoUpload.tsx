@@ -13,7 +13,7 @@ interface PhotoUploadProps {
 export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   photos,
   onPhotosChange,
-  maxPhotos = 5,
+  maxPhotos = 10,
   label = 'Photos',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
