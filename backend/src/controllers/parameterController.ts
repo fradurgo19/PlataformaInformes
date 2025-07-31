@@ -59,6 +59,7 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
     const errors: string[] = [];
     let successCount = 0;
     let errorCount = 0;
+    const processedKeys = new Set<string>(); // Track processed combinations to avoid duplicates
 
     // Parse file data based on type
     if (fileType === 'excel' && excelData) {
@@ -162,6 +163,15 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
             model = combinedValue;
           }
         }
+
+        // Check for duplicates
+        const parameterKey = `${row.parameter?.trim()}-${parameterType?.trim()}-${model?.trim()}`.toLowerCase();
+        if (processedKeys.has(parameterKey)) {
+          errors.push(`Row ${rowNumber}: Duplicate parameter combination (${row.parameter} - ${parameterType} - ${model})`);
+          errorCount++;
+          continue;
+        }
+        processedKeys.add(parameterKey);
         
         // Validate required fields (observation is optional)
         const missingFields = [];
@@ -196,11 +206,9 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
           console.log(`Row ${rowNumber}: Auto-swapped ranges: min=${minRange}, max=${maxRange}`);
         }
 
-        // Still validate that they're not equal
+        // Allow equal values but log a warning
         if (minRange === maxRange) {
-          errors.push(`Row ${rowNumber}: Minimum range (${minRange}) cannot be equal to maximum range (${maxRange})`);
-          errorCount++;
-          continue;
+          console.log(`Row ${rowNumber}: Warning - Equal ranges (${minRange}), but allowing import`);
         }
 
         // Create parameter
