@@ -101,17 +101,15 @@ export const bulkImportParameters = async (req: AuthRequest, res: Response) => {
             results.push(row);
           })
           .on('end', async () => {
-                      resolve();
-          } catch (error) {
+            resolve();
+          })
+          .on('error', (error: any) => {
+            res.status(400).json({ 
+              success: false, 
+              error: `CSV parsing error: ${error.message}` 
+            });
             reject(error);
-          }
-        })
-        .on('error', (error: any) => {
-          res.status(400).json({ 
-            success: false, 
-            error: `CSV parsing error: ${error.message}` 
           });
-          reject(error);
         });
       });
     }
