@@ -25,8 +25,11 @@ export const BulkImportParameters: React.FC<BulkImportParametersProps> = ({ onIm
     if (!file) return;
 
     // Validate file type
-    if (!file.name.endsWith('.csv')) {
-      setError('Please select a CSV file');
+    const isCSV = file.name.endsWith('.csv');
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    
+    if (!isCSV && !isExcel) {
+      setError('Please select a CSV or Excel file (.csv, .xlsx, .xls)');
       return;
     }
 
@@ -35,25 +38,48 @@ export const BulkImportParameters: React.FC<BulkImportParametersProps> = ({ onIm
     setImportResult(null);
 
     try {
-      const csvData = await file.text();
-      
-      // Check if CSV has the new format (with observation column)
-      const firstLine = csvData.split('\n')[0];
-      const hasObservationColumn = firstLine.includes('observation');
-      
-      const response = await apiService.bulkImportParameters({ 
-        csvData,
-        legacyFormat: !hasObservationColumn 
-      });
-      
-      if (response.success && response.data) {
-        setImportResult(response.data);
-        // Call callback to refresh parameters list
-        if (onImportSuccess) {
-          onImportSuccess();
+      if (isCSV) {
+        // Handle CSV files
+        const csvData = await file.text();
+        
+        // Check if CSV has the new format (with observation column)
+        const firstLine = csvData.split('\n')[0];
+        const hasObservationColumn = firstLine.includes('observation');
+        
+        const response = await apiService.bulkImportParameters({ 
+          csvData,
+          fileType: 'csv',
+          legacyFormat: !hasObservationColumn 
+        });
+        
+        if (response.success && response.data) {
+          setImportResult(response.data);
+          // Call callback to refresh parameters list
+          if (onImportSuccess) {
+            onImportSuccess();
+          }
+        } else {
+          setError(response.error || 'Import failed');
         }
       } else {
-        setError(response.error || 'Import failed');
+        // Handle Excel files
+        const arrayBuffer = await file.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        
+        const response = await apiService.bulkImportParameters({ 
+          excelData: base64,
+          fileType: 'excel'
+        });
+        
+        if (response.success && response.data) {
+          setImportResult(response.data);
+          // Call callback to refresh parameters list
+          if (onImportSuccess) {
+            onImportSuccess();
+          }
+        } else {
+          setError(response.error || 'Import failed');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Import failed');
@@ -105,28 +131,28 @@ Hydraulic Pressure,Sensor,CATERPILLAR 320D,0,300,https://example.com/hydraulic-p
       <div className="space-y-4">
         <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
           <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600 mb-2">
-            Upload a CSV file with parameters
-          </p>
-          <p className="text-xs text-slate-500 mb-4">
-            File must include: parameter, parameter_type, model, min_range, max_range, resource_url, observation
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={handleFileUpload}
-            className="hidden"
-            disabled={isImporting}
-          />
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            {isImporting ? 'Importing...' : 'Select CSV File'}
-          </Button>
+                     <p className="text-sm text-slate-600 mb-2">
+             Upload a CSV or Excel file with parameters
+           </p>
+           <p className="text-xs text-slate-500 mb-4">
+             File must include: parameter, parameter_type, model, min_range, max_range, resource_url, observation
+           </p>
+                     <input
+             ref={fileInputRef}
+             type="file"
+             accept=".csv,.xlsx,.xls"
+             onChange={handleFileUpload}
+             className="hidden"
+             disabled={isImporting}
+           />
+                     <Button
+             onClick={() => fileInputRef.current?.click()}
+             disabled={isImporting}
+             className="flex items-center gap-2"
+           >
+             <Upload className="w-4 h-4" />
+             {isImporting ? 'Importing...' : 'Select File (CSV/Excel)'}
+           </Button>
         </div>
 
         {error && (
