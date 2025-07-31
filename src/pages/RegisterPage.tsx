@@ -13,15 +13,15 @@ const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState('viewer');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Solo se permite crear usuarios con rol viewer
   const roleOptions = [
-    { value: 'user', label: 'Usuario Regular' },
     { value: 'viewer', label: 'Visualizador (Solo propios reportes)' },
   ];
 
@@ -55,6 +55,12 @@ const RegisterPage: React.FC = () => {
 
   return (
     <AuthLayout>
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-blue-700 text-sm">
+          <strong>Nota:</strong> Solo se pueden crear usuarios con rol de Visualizador. 
+          Los usuarios visualizadores pueden ver únicamente sus propios reportes.
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <Input
           label="Username"
@@ -86,6 +92,7 @@ const RegisterPage: React.FC = () => {
           onChange={(e) => setRole(e.target.value)}
           options={roleOptions}
           required
+          disabled={true}
         />
         <div className="relative">
           <Input
