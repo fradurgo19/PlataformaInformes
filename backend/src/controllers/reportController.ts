@@ -575,6 +575,7 @@ export const deleteReport = async (req: Request, res: Response): Promise<void> =
 export const downloadPDF = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
     const reportId = req.params.id;
     
     // Get report with all related data
@@ -623,13 +624,23 @@ export const downloadPDF = async (req: Request, res: Response): Promise<void> =>
     // Flatten photos array
     const allPhotos = components.flatMap(component => component.photos);
     
-    // Generate PDF
-    const pdfBuffer = await PDFService.generatePDF(
-      report,
-      components,
-      allPhotos,
-      suggestedPartsResult.rows
-    );
+    // Generate PDF based on user role
+    let pdfBuffer: Buffer;
+    if (userRole === 'viewer') {
+      pdfBuffer = await PDFService.generatePDFWithoutLogo(
+        report,
+        components,
+        allPhotos,
+        suggestedPartsResult.rows
+      );
+    } else {
+      pdfBuffer = await PDFService.generatePDF(
+        report,
+        components,
+        allPhotos,
+        suggestedPartsResult.rows
+      );
+    }
     
     // Set response headers
     const filename = `Reporte_${report.client_name}_${report.machine_type}_${new Date(report.report_date).toISOString().split('T')[0]}.pdf`;

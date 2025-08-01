@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../../index';
 import pool from '../../config/database';
+import jwt from 'jsonwebtoken';
 
 describe('Reports API Tests', () => {
   let authToken: string;
@@ -267,6 +268,21 @@ describe('Reports API Tests', () => {
       const response = await request(app)
         .get(`/api/reports/${reportId}/pdf`)
         .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toBe('application/pdf');
+    });
+
+    it('should generate PDF without logo for viewer role', async () => {
+      // Crear un token para un usuario viewer
+      const viewerToken = jwt.sign(
+        { id: 'viewer-test-id', username: 'viewer', role: 'viewer' },
+        process.env.JWT_SECRET || 'test-secret'
+      );
+
+      const response = await request(app)
+        .get(`/api/reports/${reportId}/pdf`)
+        .set('Authorization', `Bearer ${viewerToken}`);
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toBe('application/pdf');
