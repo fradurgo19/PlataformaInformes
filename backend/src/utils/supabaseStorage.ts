@@ -38,4 +38,27 @@ export async function uploadFileToSupabase(fileBuffer: Buffer, fileName: string,
     size: bufferToUpload.length,
     mimetype: uploadMime,
   };
+}
+
+export async function deleteFilesFromSupabase(fileUrl: string): Promise<void> {
+  try {
+    // Extraer el nombre del archivo de la URL
+    const urlParts = fileUrl.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    
+    // Eliminar el archivo de Supabase Storage
+    const { error } = await supabase.storage
+      .from(bucket)
+      .remove([fileName]);
+
+    if (error) {
+      console.error('Error deleting file from Supabase:', error);
+      throw error;
+    }
+    
+    console.log(`File ${fileName} deleted successfully from Supabase Storage`);
+  } catch (error) {
+    console.error('Error in deleteFilesFromSupabase:', error);
+    throw error;
+  }
 } 

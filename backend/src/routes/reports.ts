@@ -24,7 +24,7 @@ router.post('/', upload.any(), handleUploadError, validateFileUpload, createRepo
 router.get('/', getReports as any);
 router.get('/:id', getReportById as any);
 router.put('/:id', upload.any(), handleUploadError, validateFileUpload, updateReport as any);
-router.delete('/:id', deleteReport as any);
+router.delete('/:id', requireRole(['admin']), deleteReport as any);
 
 // PDF and Email routes
 router.get('/:id/pdf', requireRole(['admin', 'user', 'viewer']), downloadPDF as any);

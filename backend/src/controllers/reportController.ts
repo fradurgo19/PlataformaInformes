@@ -530,12 +530,22 @@ export const deleteReport = async (req: Request, res: Response): Promise<void> =
     await client.query('BEGIN');
     
     const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
     const reportId = req.params.id;
     
-    // Check if report exists and belongs to user
+    // Only admin users can delete reports
+    if (userRole !== 'admin') {
+      res.status(403).json({
+        success: false,
+        error: 'Only administrators can delete reports'
+      });
+      return;
+    }
+    
+    // Check if report exists
     const existingReport = await client.query(
-      'SELECT id FROM reports WHERE id = $1 AND user_id = $2',
-      [reportId, userId]
+      'SELECT id, client_name FROM reports WHERE id = $1',
+      [reportId]
     );
     
     if (existingReport.rows.length === 0) {
@@ -546,17 +556,49 @@ export const deleteReport = async (req: Request, res: Response): Promise<void> =
       return;
     }
     
+    // Get all photos associated with this report for deletion from Supabase
+    const componentsResult = await client.query(
+      'SELECT id FROM components WHERE report_id = $1',
+      [reportId]
+    );
+    
+    const componentIds = componentsResult.rows.map(row => row.id);
+    let photosToDelete: any[] = [];
+    
+    if (componentIds.length > 0) {
+      const photosResult = await client.query(
+        'SELECT file_path FROM photos WHERE component_id = ANY($1)',
+        [componentIds]
+      );
+      photosToDelete = photosResult.rows;
+    }
+    
+    // Delete photos from Supabase Storage
+    if (photosToDelete.length > 0) {
+      try {
+        const { deleteFilesFromSupabase } = await import('../utils/supabaseStorage');
+        for (const photo of photosToDelete) {
+          if (photo.file_path && photo.file_path.startsWith('http')) {
+            await deleteFilesFromSupabase(photo.file_path);
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting photos from Supabase:', error);
+        // Continue with deletion even if photo deletion fails
+      }
+    }
+    
     // Delete report (cascade will handle related records)
     await client.query(
-      'DELETE FROM reports WHERE id = $1 AND user_id = $2',
-      [reportId, userId]
+      'DELETE FROM reports WHERE id = $1',
+      [reportId]
     );
     
     await client.query('COMMIT');
     
     const response: ApiResponse = {
       success: true,
-      message: 'Report deleted successfully'
+      message: 'Report and all associated data deleted successfully'
     };
     
     res.json(response);
