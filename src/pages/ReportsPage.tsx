@@ -7,6 +7,7 @@ import { LoadingSpinner } from '../components/molecules/LoadingSpinner';
 import { Button } from '../components/atoms/Button';
 import { Input } from '../components/atoms/Input';
 import { Select } from '../components/atoms/Select';
+import { useAuth } from '../context/AuthContext';
 import { 
   Plus, 
   Search, 
@@ -28,6 +29,9 @@ export const ReportsPage: React.FC = () => {
   
   const { data: reportsData, isLoading, error } = useReports(filters);
   const deleteReportMutation = useDeleteReport();
+  const { state: { user } } = useAuth();
+  
+  const isAdmin = user?.role === 'admin';
 
   const machineTypeOptions = [
     { value: '', label: 'All Machine Types' },
@@ -202,6 +206,16 @@ export const ReportsPage: React.FC = () => {
                   >
                     <Download className="w-4 h-4" />
                   </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteConfirm(report.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -227,6 +241,46 @@ export const ReportsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="w-6 h-6 text-red-500 mr-3" />
+              <h3 className="text-lg font-semibold text-slate-900">Confirm Deletion</h3>
+            </div>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to delete this report? This action cannot be undone and will permanently remove the report and all associated data including images.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleDeleteReport(deleteConfirm)}
+                disabled={deleteReportMutation.isPending}
+              >
+                {deleteReportMutation.isPending ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Report
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };

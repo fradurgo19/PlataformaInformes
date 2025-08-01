@@ -83,12 +83,24 @@ export const ReportViewPage: React.FC = () => {
   };
 
   const handleDeleteReport = async () => {
-    if (id && window.confirm('Are you sure you want to delete this report?')) {
+    if (!id) return;
+    
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this report?\n\n` +
+      `Client: ${report.client_name}\n` +
+      `Machine: ${report.machine_type} - ${report.model}\n` +
+      `Serial: ${report.serial_number}\n\n` +
+      `This action cannot be undone and will permanently remove the report and all associated data including images.`
+    );
+    
+    if (confirmed) {
       try {
         await deleteReportMutation.mutateAsync(id);
+        handleSuccess('Report deleted successfully');
         navigate('/reports');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error deleting report:', error);
+        handleError(error.message || 'Failed to delete report');
       }
     }
   };
@@ -240,6 +252,27 @@ export const ReportViewPage: React.FC = () => {
                   Edit
                 </Button>
               </Link>
+              {/* Botón de eliminación: solo para administradores */}
+              {authState.user?.role === 'admin' && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteReport}
+                  disabled={deleteReportMutation.isPending}
+                  className="ml-4"
+                >
+                  {deleteReportMutation.isPending ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
 

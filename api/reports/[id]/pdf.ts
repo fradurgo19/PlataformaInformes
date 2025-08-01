@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import pool from '../../../backend/src/config/database';
 import { PDFService } from '../../../backend/src/services/pdfService';
+import jwt from 'jsonwebtoken';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -8,6 +9,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Verificar autenticación
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({ error: 'Access token required' });
+    }
+
+    const secret = process.env.JWT_SECRET || 'fallback_secret';
+    let user: any;
+    
+    try {
+      user = jwt.verify(token, secret);
+    } catch (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+
+    // Verificar rol
+    if (!['admin', 'user', 'viewer'].includes(user.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     const { id } = req.query;
     if (!id || typeof id !== 'string') {
       return res.status(400).json({ error: 'Missing report id' });
@@ -46,13 +69,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
     const allPhotos = components.flatMap((component: any) => component.photos);
 
-    // Generar el PDF usando tu servicio real
-    const pdfBuffer = await PDFService.generatePDF(
-      report,
-      components,
-      allPhotos,
-      suggestedPartsResult.rows
-    );
+    // Generar el PDF basado en el rol del usuario
+    let pdfBuffer: Buffer;
+    if (user.role === 'viewer') {
+      pdfBuffer = await PDFService.generatePDFWithoutLogo(
+        report,
+        components,
+        allPhotos,
+        suggestedPartsResult.rows
+      );
+    } else {
+      pdfBuffer = await PDFService.generatePDF(
+        report,
+        components,
+        allPhotos,
+        suggestedPartsResult.rows
+      );
+    }
 
     // Enviar el PDF como respuesta
     const filename = `Reporte_${report.client_name}_${report.machine_type}_${new Date(report.report_date).toISOString().split('T')[0]}.pdf`;
