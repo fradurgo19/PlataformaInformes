@@ -13,6 +13,7 @@ import {
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { upload, handleUploadError } from '../middleware/upload';
 import { validateFileUpload } from '../middleware/fileValidation';
+import { pool } from '../config/database';
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.post('/upload', upload.array('photos', 10), handleUploadError, validateFi
 });
 
 // Route to delete a specific photo
-router.delete('/photos/:photoId', auth, async (req, res) => {
+router.delete('/photos/:photoId', authenticateToken as any, async (req, res) => {
   try {
     const photoId = req.params.photoId;
     const userId = (req as any).user.id;
@@ -111,10 +112,10 @@ router.delete('/photos/:photoId', auth, async (req, res) => {
     // Delete the photo
     await pool.query('DELETE FROM photos WHERE id = $1', [photoId]);
 
-    res.json({ success: true, message: 'Photo deleted successfully' });
+    return res.json({ success: true, message: 'Photo deleted successfully' });
   } catch (error) {
     console.error('Delete photo error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
