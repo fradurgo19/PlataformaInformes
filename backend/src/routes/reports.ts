@@ -13,7 +13,7 @@ import {
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { upload, handleUploadError } from '../middleware/upload';
 import { validateFileUpload } from '../middleware/fileValidation';
-import { pool } from '../config/database';
+import pool from '../config/database';
 
 const router = Router();
 
