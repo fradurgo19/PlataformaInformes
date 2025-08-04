@@ -46,7 +46,7 @@ class LocalErrorBoundary extends React.Component<{children: React.ReactNode}, {h
               <h3 className="text-lg font-semibold text-slate-900 mb-2">Unexpected Error</h3>
               <p className="text-slate-600 mb-4">A rendering error occurred. Please check the console for details.</p>
               <pre className="bg-red-100 text-red-800 rounded p-2 text-xs overflow-x-auto max-w-md mx-auto mb-4">
-                {String(this.state.error)}
+                {String(this.state.error)}x
               </pre>
               <Link to="/reports">
                 <Button variant="outline">

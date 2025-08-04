@@ -1,13 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { Button } from '../atoms/Button';
-import { Camera, X, Upload } from 'lucide-react';
+import { Camera, X, Upload, Trash2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface PhotoUploadProps {
-  photos: (File | string)[];
-  onPhotosChange: (photos: (File | string)[]) => void;
+  photos: Array<File | { id: string; url: string; filename: string }>;
+  onPhotosChange: (photos: Array<File | { id: string; url: string; filename: string }>) => void;
   maxPhotos?: number;
   label?: string;
+  onDeleteExistingPhoto?: (photoId: string) => Promise<void>;
 }
 
 export const PhotoUpload: React.FC<PhotoUploadProps> = ({
@@ -15,9 +16,11 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   onPhotosChange,
   maxPhotos = 10,
   label = 'Photos',
+  onDeleteExistingPhoto,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -36,13 +39,43 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     handleFileSelect(e.dataTransfer.files);
   };
 
-  const removePhoto = (index: number) => {
-    const newPhotos = photos.filter((_, i) => i !== index);
-    onPhotosChange(newPhotos);
+  const removePhoto = async (index: number) => {
+    const photo = photos[index];
+    
+    // Si es una foto existente (tiene id), llamar a la API para eliminarla
+    if (typeof photo === 'object' && 'id' in photo && onDeleteExistingPhoto) {
+      try {
+        setDeletingPhotoId(photo.id);
+        await onDeleteExistingPhoto(photo.id);
+        // La foto se eliminará del servidor, pero mantenemos la UI actualizada
+        const newPhotos = photos.filter((_, i) => i !== index);
+        onPhotosChange(newPhotos);
+      } catch (error) {
+        console.error('Error deleting photo:', error);
+        // Si falla la eliminación, no actualizamos la UI
+      } finally {
+        setDeletingPhotoId(null);
+      }
+    } else {
+      // Si es una nueva foto (File), solo la removemos de la UI
+      const newPhotos = photos.filter((_, i) => i !== index);
+      onPhotosChange(newPhotos);
+    }
   };
 
   const openFileDialog = () => {
     fileInputRef.current?.click();
+  };
+
+  const isExistingPhoto = (photo: File | { id: string; url: string; filename: string }): boolean => {
+    return typeof photo === 'object' && 'id' in photo;
+  };
+
+  const getPhotoSrc = (photo: File | { id: string; url: string; filename: string }): string => {
+    if (photo instanceof File) {
+      return URL.createObjectURL(photo);
+    }
+    return photo.url;
   };
 
   return (
@@ -50,6 +83,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       <label className="block text-sm font-medium text-slate-700">
         {label}
         <span className="text-slate-400 ml-1">({photos.length}/{maxPhotos})</span>
+        {photos.length >= maxPhotos && (
+          <span className="text-orange-600 ml-2 text-xs">Maximum photos reached</span>
+        )}
       </label>
 
       {/* Upload Area */}
@@ -97,28 +133,49 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       {photos.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {photos.map((photo, index) => {
-            let src = '';
-            if (typeof photo === 'string') {
-              src = photo;
-            } else if (photo instanceof File) {
-              src = URL.createObjectURL(photo);
-            }
+            const src = getPhotoSrc(photo);
+            const isExisting = isExistingPhoto(photo);
+            const isDeleting = isExisting && deletingPhotoId === (photo as any).id;
+            
             return (
               <div key={index} className="relative group w-32 h-24">
                 <img
                   src={src}
                   alt={`Photo ${index + 1}`}
-                  className="w-full h-full object-cover rounded-lg border border-slate-200"
+                  className={cn(
+                    "w-full h-full object-cover rounded-lg border border-slate-200",
+                    isDeleting && "opacity-50"
+                  )}
                   onLoad={() => {
                     if (photo instanceof File) URL.revokeObjectURL(src);
                   }}
                 />
+                {/* Badge para fotos existentes */}
+                {isExisting && (
+                  <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                    Existing
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => removePhoto(index)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  disabled={isDeleting}
+                  className={cn(
+                    "absolute -top-2 -right-2 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                    isExisting 
+                      ? "bg-orange-500 hover:bg-orange-600" 
+                      : "bg-red-500 hover:bg-red-600",
+                    isDeleting && "opacity-50 cursor-not-allowed"
+                  )}
+                  title={isExisting ? "Remove existing photo" : "Remove new photo"}
                 >
-                  <X className="w-3 h-3" />
+                  {isDeleting ? (
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : isExisting ? (
+                    <Trash2 className="w-3 h-3" />
+                  ) : (
+                    <X className="w-3 h-3" />
+                  )}
                 </button>
               </div>
             );

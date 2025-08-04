@@ -464,14 +464,11 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
       }
       
       // --- Photos Synchronization for this component ---
-      const fePhotoUrls = componentData.photos.filter((p: any) => typeof p === 'string');
-      const fePhotoFilenames = fePhotoUrls.map((url: string) => url.split('/').pop());
-
-      // Delete photos removed from the frontend
-      await client.query(
-        `DELETE FROM photos WHERE component_id = $1 AND filename NOT IN (SELECT unnest($2::text[]))`,
-        [componentId, fePhotoFilenames]
-      );
+      // Mantener todas las fotos existentes y solo agregar las nuevas
+      // No eliminamos fotos existentes para evitar pérdida accidental de datos
+      
+      // Si el componente ya existe, mantener todas las fotos existentes
+      // Solo agregar las nuevas fotos subidas
       
       // Add new photos
       const newPhotos = files.filter(file => file.fieldname === `photos_${index}`);

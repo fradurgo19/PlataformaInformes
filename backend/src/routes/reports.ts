@@ -68,4 +68,54 @@ router.post('/upload', upload.array('photos', 10), handleUploadError, validateFi
   }
 });
 
+// Route to delete a specific photo
+router.delete('/photos/:photoId', auth, async (req, res) => {
+  try {
+    const photoId = req.params.photoId;
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+
+    // Get photo info to check permissions
+    const photoResult = await pool.query(
+      `SELECT p.*, c.report_id, r.user_id 
+       FROM photos p 
+       JOIN components c ON p.component_id = c.id 
+       JOIN reports r ON c.report_id = r.id 
+       WHERE p.id = $1`,
+      [photoId]
+    );
+
+    if (photoResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Photo not found' });
+    }
+
+    const photo = photoResult.rows[0];
+    const reportOwnerId = photo.user_id;
+    const isOwner = userId === reportOwnerId;
+    const isAdmin = userRole === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to delete this photo' });
+    }
+
+    // Check if report is closed
+    const reportResult = await pool.query(
+      'SELECT general_status FROM reports WHERE id = $1',
+      [photo.report_id]
+    );
+
+    if (reportResult.rows[0]?.general_status === 'CLOSED') {
+      return res.status(403).json({ success: false, error: 'Report is CLOSED and cannot be edited' });
+    }
+
+    // Delete the photo
+    await pool.query('DELETE FROM photos WHERE id = $1', [photoId]);
+
+    res.json({ success: true, message: 'Photo deleted successfully' });
+  } catch (error) {
+    console.error('Delete photo error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
 export default router; 

@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   AlertCircle 
 } from 'lucide-react';
+import { apiService } from '../services/api';
 
 export const NewReportPage: React.FC = () => {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export const NewReportPage: React.FC = () => {
     parameters?: { name: string; minValue: number; maxValue: number; measuredValue: number; corrected: boolean; observation: string }[];
     status: 'CORRECTED' | 'PENDING';
     suggestions?: string;
-    photos: (File | string)[];
+    photos: Array<File | { id: string; url: string; filename: string }>;
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }>>([]);
 
@@ -837,19 +838,38 @@ export const NewReportPage: React.FC = () => {
           }
         }
         
-        let photos: string[] = [];
+        let photos: Array<{ id: string; url: string; filename: string }> = [];
         if (Array.isArray(comp.photos)) {
           photos = comp.photos.map((p: any) => {
-            if (typeof p === 'string') return p;
+            if (typeof p === 'string') {
+              // Si es una URL string, crear un objeto con información básica
+              return {
+                id: `temp_${Date.now()}_${Math.random()}`,
+                url: p,
+                filename: p.split('/').pop() || 'unknown.jpg'
+              };
+            }
             if (p.file_path) {
-              if (p.file_path.startsWith('http')) return p.file_path;
-              return `http://localhost:3001${p.file_path.startsWith('/') ? '' : '/'}${p.file_path}`;
+              const url = p.file_path.startsWith('http') ? p.file_path : `http://localhost:3001${p.file_path.startsWith('/') ? '' : '/'}${p.file_path}`;
+              return {
+                id: p.id || `temp_${Date.now()}_${Math.random()}`,
+                url: url,
+                filename: p.filename || p.original_name || 'unknown.jpg'
+              };
             }
             if (p.filename) {
-              return `http://localhost:3001/uploads/${p.filename}`;
+              return {
+                id: p.id || `temp_${Date.now()}_${Math.random()}`,
+                url: `http://localhost:3001/uploads/${p.filename}`,
+                filename: p.filename
+              };
             }
-            return '';
-          });
+            return {
+              id: `temp_${Date.now()}_${Math.random()}`,
+              url: '',
+              filename: 'unknown.jpg'
+            };
+          }).filter(p => p.url !== '');
         }
         
         return {
@@ -898,6 +918,16 @@ export const NewReportPage: React.FC = () => {
           newErrors[`component_${index}_findings`] = `Findings are required for component ${index + 1}`;
         }
       });
+    }
+
+    // Validate total number of photos
+    const totalPhotos = components.reduce((total, comp) => {
+      const newPhotos = comp.photos.filter(p => p instanceof File).length;
+      return total + newPhotos;
+    }, 0);
+    
+    if (totalPhotos > 50) {
+      newErrors.photos = 'Too many photos. Maximum is 50 photos per report.';
     }
 
     // Step 3 validation
@@ -1014,11 +1044,18 @@ export const NewReportPage: React.FC = () => {
   };
 
   const removeParameter = (componentIdx: number, paramIdx: number) => {
-    setComponents(prev => prev.map((comp, i) => {
-      if (i !== componentIdx) return comp;
-      const newParams = (comp.parameters || []).filter((_, j) => j !== paramIdx);
-      return { ...comp, parameters: newParams };
-    }));
+    const newComponents = [...components];
+    newComponents[componentIdx].parameters = newComponents[componentIdx].parameters?.filter((_, i) => i !== paramIdx);
+    setComponents(newComponents);
+  };
+
+  const deleteExistingPhoto = async (photoId: string) => {
+    try {
+      await apiService.deletePhoto(photoId);
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      throw error;
+    }
   };
 
   const handleSubmit = async () => {
@@ -1060,7 +1097,14 @@ export const NewReportPage: React.FC = () => {
           status: c.status,
           suggestions: c.suggestions,
           priority: c.priority,
-          photos: c.photos.filter(p => typeof p === 'string'),
+          photos: c.photos.map(p => {
+            if (p instanceof File) {
+              // Para nuevas fotos (File), enviar null para que el backend las procese
+              return null;
+            }
+            // Para fotos existentes, enviar la URL completa
+            return p.url;
+          }).filter(p => p !== null),
         })),
         suggested_parts: suggestedParts.map(p => ({
           part_number: p.partNumber,
@@ -1102,6 +1146,14 @@ export const NewReportPage: React.FC = () => {
           setErrors({ submit: 'You are not authorized to edit this report or the report was not found.' });
         } else if (error.message.includes('CLOSED')) {
           setErrors({ submit: 'This report is closed and cannot be edited.' });
+        } else if (error.message.includes('Request too large') || error.message.includes('413')) {
+          setErrors({ submit: 'The request is too large. Please reduce the number of photos or their size. Maximum is 50 photos per report.' });
+        } else if (error.message.includes('Too many files')) {
+          setErrors({ submit: 'Too many photos. Maximum is 50 photos per report.' });
+        } else if (error.message.includes('File too large')) {
+          setErrors({ submit: 'One or more photos are too large. Maximum size is 20MB per photo.' });
+        } else if (error.message.includes('Failed to parse response')) {
+          setErrors({ submit: 'Server error. Please try again with fewer photos or contact support.' });
         } else {
           setErrors({ submit: `Error saving report: ${error.message}` });
         }
@@ -1237,6 +1289,15 @@ export const NewReportPage: React.FC = () => {
           <div className="flex">
             <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
             <p className="text-red-800">{errors.components}</p>
+          </div>
+        </div>
+      )}
+
+      {errors.photos && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
+            <p className="text-red-800">{errors.photos}</p>
           </div>
         </div>
       )}
@@ -1378,6 +1439,7 @@ export const NewReportPage: React.FC = () => {
                 label="Photos"
                 photos={component.photos}
                 onPhotosChange={(photos) => updateComponent(index, 'photos', photos)}
+                onDeleteExistingPhoto={deleteExistingPhoto}
               />
             </div>
           </div>

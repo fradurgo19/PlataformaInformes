@@ -20,8 +20,8 @@ export const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'), // 10MB default
-    files: 10 // Max 10 files per request
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || '20971520'), // 20MB default
+    files: 50 // Max 50 files per request (para múltiples componentes)
   }
 });
 
@@ -31,13 +31,19 @@ export const handleUploadError = (error: Error, req: Request, res: any, next: an
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        error: 'File too large. Maximum size is 10MB'
+        error: 'File too large. Maximum size is 20MB per file'
       });
     }
     if (error.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({
         success: false,
-        error: 'Too many files. Maximum is 10 files'
+        error: 'Too many files. Maximum is 50 files per request'
+      });
+    }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        error: 'Unexpected file field in request'
       });
     }
   }
