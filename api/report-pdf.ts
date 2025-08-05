@@ -1,5 +1,13 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
+// Función helper para procesar texto y preservar saltos de línea
+function processTextWithLineBreaks(text: string): string {
+  if (!text) return '';
+  // Para pdf-lib, necesitamos manejar los saltos de línea de manera diferente
+  // ya que no soporta HTML. Vamos a reemplazar \n con espacios para evitar problemas
+  return text.replace(/\n/g, ' ');
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -38,7 +46,7 @@ export default async function handler(req: any, res: any) {
     page.drawText(`OTT: ${report.ott || ''}`, { x: 50, y, size: 12, font });
     y -= 18;
     if (report.reason_of_service) {
-      page.drawText(`Razón del Servicio: ${report.reason_of_service}`, { x: 50, y, size: 12, font });
+      page.drawText(`Razón del Servicio: ${processTextWithLineBreaks(report.reason_of_service)}`, { x: 50, y, size: 12, font });
       y -= 18;
     }
     y -= 6;
@@ -50,11 +58,11 @@ export default async function handler(req: any, res: any) {
       page.drawText(`- ${component.type}: ${component.status}`, { x: 60, y, size: 12, font });
       y -= 16;
       if (component.findings) {
-        page.drawText(`  Hallazgos: ${component.findings}`, { x: 70, y, size: 10, font });
+        page.drawText(`  Hallazgos: ${processTextWithLineBreaks(component.findings)}`, { x: 70, y, size: 10, font });
         y -= 14;
       }
       if (component.suggestions) {
-        page.drawText(`  Sugerencias: ${component.suggestions}`, { x: 70, y, size: 10, font });
+        page.drawText(`  Sugerencias: ${processTextWithLineBreaks(component.suggestions)}`, { x: 70, y, size: 10, font });
         y -= 14;
       }
       // Fotos asociadas
@@ -92,7 +100,7 @@ export default async function handler(req: any, res: any) {
     if (report.conclusions) {
       page.drawText('Conclusiones:', { x: 50, y, size: 14, font });
       y -= 18;
-      page.drawText(report.conclusions, { x: 60, y, size: 12, font });
+      page.drawText(processTextWithLineBreaks(report.conclusions), { x: 60, y, size: 12, font });
     }
 
     const pdfBytes = await pdfDoc.save();

@@ -6,6 +6,15 @@ import path from 'path';
 import axios from 'axios';
 
 export class PDFService {
+  // Función helper para procesar texto y preservar saltos de línea
+  private static processTextWithLineBreaks(text: string): string {
+    if (!text) return '';
+    // Convertir saltos de línea en elementos <br> y preservar espacios múltiples
+    return text
+      .replace(/\n/g, '<br>')
+      .replace(/\s{2,}/g, (match) => '&nbsp;'.repeat(match.length));
+  }
+
   private static async getLogoBase64(): Promise<string> {
     const logoUrl = 'https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png';
     try {
@@ -38,10 +47,10 @@ export class PDFService {
             const imageBuffer = await fs.promises.readFile(imagePath);
             imageBase64 = imageBuffer.toString('base64');
           }
-          return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" style="max-width: 200px; margin: 5px; border: 1px solid #ddd; display: inline-block; vertical-align: top;">`;
+          return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" class="photo-item" style="object-fit: cover;">`;
         } catch (error) {
           console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
-          return `<div style="width: 200px; height: 150px; border: 1px dashed #ccc; text-align: center; padding: 10px; display: inline-block;">Image not found</div>`;
+          return `<div class="photo-item" style="border: 1px dashed #ccc; text-align: center; padding: 10px; display: flex; align-items: center; justify-content: center;">Image not found</div>`;
         }
       });
 
@@ -51,7 +60,7 @@ export class PDFService {
       return `
         <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
-          <p><strong>Hallazgos / Findings:</strong> ${component.findings}</p>
+          <p><strong>Hallazgos / Findings:</strong> ${this.processTextWithLineBreaks(component.findings)}</p>
           ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
   <div style="margin: 10px 0;">
     <strong>Parámetros / Parameters:</strong>
@@ -83,8 +92,8 @@ export class PDFService {
 ` : ''}
           <p><strong>Estado / Status:</strong> <span style="color: ${component.status === 'CORRECTED' ? 'green' : 'orange'}; font-weight: bold;">${component.status}</span></p>
           <p><strong>Prioridad / Priority:</strong> <span style="color: ${component.priority === 'HIGH' ? 'red' : component.priority === 'MEDIUM' ? 'orange' : 'green'}; font-weight: bold;">${component.priority}</span></p>
-          ${component.suggestions ? `<p><strong>Sugerencias / Suggestions:</strong> ${component.suggestions}</p>` : ''}
-          ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos / Photos:</strong><br>${photosHTML}</div>` : ''}
+          ${component.suggestions ? `<p><strong>Sugerencias / Suggestions:</strong> ${this.processTextWithLineBreaks(component.suggestions)}</p>` : ''}
+          ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos / Photos:</strong><div class="photos-container">${photosHTML}</div></div>` : ''}
         </div>
       `;
     });
@@ -133,6 +142,8 @@ export class PDFService {
           .status-draft { background-color: #fef3c7; color: #92400e; }
           .status-completed { background-color: #d1fae5; color: #065f46; }
           .status-archived { background-color: #e5e7eb; color: #374151; }
+          .photos-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+          .photo-item { width: 200px; height: 150px; margin: 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
           .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
         </style>
       </head>
@@ -166,7 +177,7 @@ export class PDFService {
             </div>
             ${report.reason_of_service ? `
             <div class="info-item">
-              <strong>Razón del Servicio / Reason of Service:</strong><br>${report.reason_of_service}
+              <strong>Razón del Servicio / Reason of Service:</strong><br>${this.processTextWithLineBreaks(report.reason_of_service)}
             </div>
             ` : ''}
             <div class="info-item">
@@ -191,14 +202,14 @@ export class PDFService {
         ${report.conclusions ? `
         <div class="section">
           <h2>📝 Conclusiones / Conclusions</h2>
-          <p>${report.conclusions}</p>
+          <p>${this.processTextWithLineBreaks(report.conclusions)}</p>
         </div>
         ` : ''}
 
         ${report.overall_suggestions ? `
         <div class="section">
           <h2>💡 Sugerencias Generales / Overall Suggestions</h2>
-          <p>${report.overall_suggestions}</p>
+          <p>${this.processTextWithLineBreaks(report.overall_suggestions)}</p>
         </div>
         ` : ''}
 
@@ -231,10 +242,10 @@ export class PDFService {
             const imageBuffer = await fs.promises.readFile(imagePath);
             imageBase64 = imageBuffer.toString('base64');
           }
-          return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" style="max-width: 200px; margin: 5px; border: 1px solid #ddd; display: inline-block; vertical-align: top;">`;
+          return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" class="photo-item" style="object-fit: cover;">`;
         } catch (error) {
           console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
-          return `<div style="width: 200px; height: 150px; border: 1px dashed #ccc; text-align: center; padding: 10px; display: inline-block;">Image not found</div>`;
+          return `<div class="photo-item" style="border: 1px dashed #ccc; text-align: center; padding: 10px; display: flex; align-items: center; justify-content: center;">Image not found</div>`;
         }
       });
 
@@ -244,7 +255,7 @@ export class PDFService {
       return `
         <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
-          <p><strong>Hallazgos / Findings:</strong> ${component.findings}</p>
+          <p><strong>Hallazgos / Findings:</strong> ${this.processTextWithLineBreaks(component.findings)}</p>
           ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
   <div style="margin: 10px 0;">
     <strong>Parámetros / Parameters:</strong>
@@ -276,8 +287,8 @@ export class PDFService {
 ` : ''}
           <p><strong>Estado / Status:</strong> <span style="color: ${component.status === 'CORRECTED' ? 'green' : 'orange'}; font-weight: bold;">${component.status}</span></p>
           <p><strong>Prioridad / Priority:</strong> <span style="color: ${component.priority === 'HIGH' ? 'red' : component.priority === 'MEDIUM' ? 'orange' : 'green'}; font-weight: bold;">${component.priority}</span></p>
-          ${component.suggestions ? `<p><strong>Sugerencias / Suggestions:</strong> ${component.suggestions}</p>` : ''}
-          ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos / Photos:</strong><br>${photosHTML}</div>` : ''}
+          ${component.suggestions ? `<p><strong>Sugerencias / Suggestions:</strong> ${this.processTextWithLineBreaks(component.suggestions)}</p>` : ''}
+          ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos / Photos:</strong><div class="photos-container">${photosHTML}</div></div>` : ''}
         </div>
       `;
     });
@@ -354,7 +365,7 @@ export class PDFService {
             </div>
             ${report.reason_of_service ? `
             <div class="info-item">
-              <strong>Razón del Servicio / Reason of Service:</strong><br>${report.reason_of_service}
+              <strong>Razón del Servicio / Reason of Service:</strong><br>${this.processTextWithLineBreaks(report.reason_of_service)}
             </div>
             ` : ''}
             <div class="info-item">
@@ -379,14 +390,14 @@ export class PDFService {
         ${report.conclusions ? `
         <div class="section">
           <h2>📝 Conclusiones / Conclusions</h2>
-          <p>${report.conclusions}</p>
+          <p>${this.processTextWithLineBreaks(report.conclusions)}</p>
         </div>
         ` : ''}
 
         ${report.overall_suggestions ? `
         <div class="section">
           <h2>💡 Sugerencias Generales / Overall Suggestions</h2>
-          <p>${report.overall_suggestions}</p>
+          <p>${this.processTextWithLineBreaks(report.overall_suggestions)}</p>
         </div>
         ` : ''}
 
