@@ -12,6 +12,27 @@ export class EmailService {
     }
   });
 
+  // Función para sanitizar nombres de archivo (remover caracteres especiales)
+  private static sanitizeFilename(filename: string): string {
+    return filename
+      .replace(/[áäâà]/g, 'a')
+      .replace(/[éëêè]/g, 'e')
+      .replace(/[íïîì]/g, 'i')
+      .replace(/[óöôò]/g, 'o')
+      .replace(/[úüûù]/g, 'u')
+      .replace(/[ñ]/g, 'n')
+      .replace(/[ÁÄÂÀ]/g, 'A')
+      .replace(/[ÉËÊÈ]/g, 'E')
+      .replace(/[ÍÏÎÌ]/g, 'I')
+      .replace(/[ÓÖÔÒ]/g, 'O')
+      .replace(/[ÚÜÛÙ]/g, 'U')
+      .replace(/[Ñ]/g, 'N')
+      .replace(/[^a-zA-Z0-9\s\-_\.]/g, '_') // Reemplazar caracteres especiales con _
+      .replace(/\s+/g, '_') // Reemplazar espacios con _
+      .replace(/_+/g, '_') // Reemplazar múltiples _ con uno solo
+      .trim();
+  }
+
   static async sendReportEmail(
     toEmail: string,
     report: Report,
@@ -47,7 +68,7 @@ export class EmailService {
         text: message || defaultMessage,
         attachments: [
           {
-            filename: `Reporte_${report.client_name}_${report.machine_type}_${new Date(report.report_date).toISOString().split('T')[0]}.pdf`,
+            filename: this.sanitizeFilename(`Reporte_${report.client_name}_${report.machine_type}_${new Date(report.report_date).toISOString().split('T')[0]}.pdf`),
             content: pdfBuffer,
             contentType: 'application/pdf'
           }

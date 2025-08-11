@@ -4,6 +4,7 @@ import { Input } from '../atoms/Input';
 import { Textarea } from '../atoms/Textarea';
 import { LoadingSpinner } from './LoadingSpinner';
 import { apiService } from '../../services/api';
+import { sanitizeFilename } from '../../utils/filenameSanitizer';
 
 interface ReportActionsProps {
   reportId: string;
@@ -43,7 +44,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Reporte_${reportName}_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `Reporte_${sanitizeFilename(reportName)}_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

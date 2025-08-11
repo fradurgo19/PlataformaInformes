@@ -1,0 +1,41 @@
+[1mdiff --git a/api/reports/[id]/pdf.ts b/api/reports/[id]/pdf.ts[m
+[1mindex 5636b83..5e89578 100644[m
+[1m--- a/api/reports/[id]/pdf.ts[m
+[1m+++ b/api/reports/[id]/pdf.ts[m
+[36m@@ -3,6 +3,27 @@[m [mimport pool from '../../../backend/src/config/database';[m
+ import { PDFService } from '../../../backend/src/services/pdfService';[m
+ import jwt from 'jsonwebtoken';[m
+ [m
+[32m+[m[32m// Función para sanitizar nombres de archivo (remover caracteres especiales)[m
+[32m+[m[32mconst sanitizeFilename = (filename: string): string => {[m
+[32m+[m[32m  return filename[m
+[32m+[m[32m    .replace(/[áäâà]/g, 'a')[m
+[32m+[m[32m    .replace(/[éëêè]/g, 'e')[m
+[32m+[m[32m    .replace(/[íïîì]/g, 'i')[m
+[32m+[m[32m    .replace(/[óöôò]/g, 'o')[m
+[32m+[m[32m    .replace(/[úüûù]/g, 'u')[m
+[32m+[m[32m    .replace(/[ñ]/g, 'n')[m
+[32m+[m[32m    .replace(/[ÁÄÂÀ]/g, 'A')[m
+[32m+[m[32m    .replace(/[ÉËÊÈ]/g, 'E')[m
+[32m+[m[32m    .replace(/[ÍÏÎÌ]/g, 'I')[m
+[32m+[m[32m    .replace(/[ÓÖÔÒ]/g, 'O')[m
+[32m+[m[32m    .replace(/[ÚÜÛÙ]/g, 'U')[m
+[32m+[m[32m    .replace(/[Ñ]/g, 'N')[m
+[32m+[m[32m    .replace(/[^a-zA-Z0-9\s\-_\.]/g, '_') // Reemplazar caracteres especiales con _[m
+[32m+[m[32m    .replace(/\s+/g, '_') // Reemplazar espacios con _[m
+[32m+[m[32m    .replace(/_+/g, '_') // Reemplazar múltiples _ con uno solo[m
+[32m+[m[32m    .trim();[m
+[32m+[m[32m};[m
+[32m+[m
+ export default async function handler(req: VercelRequest, res: VercelResponse) {[m
+   if (req.method !== 'GET') {[m
+     return res.status(405).json({ error: 'Method not allowed' });[m
+[36m@@ -90,7 +111,7 @@[m [mexport default async function handler(req: VercelRequest, res: VercelResponse) {[m
+     // Enviar el PDF como respuesta[m
+     const filename = `Reporte_${report.client_name}_${report.machine_type}_${new Date(report.report_date).toISOString().split('T')[0]}.pdf`;[m
+     res.setHeader('Content-Type', 'application/pdf');[m
+[31m-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);[m
+[32m+[m[32m    res.setHeader('Content-Disposition', `attachment; filename="${sanitizeFilename(filename)}"`);[m
+     res.setHeader('Content-Length', pdfBuffer.length);[m
+     res.status(200).send(pdfBuffer);[m
+   } catch (error) {[m
