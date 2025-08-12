@@ -10,8 +10,8 @@ const ALLOWED_MIME_TYPES = [
   'image/svg+xml'
 ];
 
-// Tamaño máximo de archivo (10MB)
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '10485760');
+// Tamaño máximo de archivo (30MB)
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '31457280');
 
 export const validateFileUpload = (req: Request, res: Response, next: NextFunction) => {
   try {

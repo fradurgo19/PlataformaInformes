@@ -926,8 +926,8 @@ export const NewReportPage: React.FC = () => {
       return total + newPhotos;
     }, 0);
     
-    if (totalPhotos > 50) {
-      newErrors.photos = 'Too many photos. Maximum is 50 photos per report.';
+    if (totalPhotos > 100) {
+      newErrors.photos = 'Too many photos. Maximum is 100 photos per report.';
     }
 
     // Step 3 validation
@@ -1147,11 +1147,11 @@ export const NewReportPage: React.FC = () => {
         } else if (error.message.includes('CLOSED')) {
           setErrors({ submit: 'This report is closed and cannot be edited.' });
         } else if (error.message.includes('Request too large') || error.message.includes('413')) {
-          setErrors({ submit: 'The request is too large. Please reduce the number of photos or their size. Maximum is 50 photos per report.' });
+          setErrors({ submit: 'The request is too large. Please reduce the number of photos or their size. Maximum is 100 photos per report.' });
         } else if (error.message.includes('Too many files')) {
-          setErrors({ submit: 'Too many photos. Maximum is 50 photos per report.' });
+          setErrors({ submit: 'Too many photos. Maximum is 100 photos per report.' });
         } else if (error.message.includes('File too large')) {
-          setErrors({ submit: 'One or more photos are too large. Maximum size is 20MB per photo.' });
+          setErrors({ submit: 'One or more photos are too large. Maximum size is 30MB per photo.' });
         } else if (error.message.includes('Failed to parse response')) {
           setErrors({ submit: 'Server error. Please try again with fewer photos or contact support.' });
         } else {
