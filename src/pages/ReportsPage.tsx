@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useReports, useDeleteReport } from '../hooks/useReports';
 import { DashboardLayout } from '../components/templates/DashboardLayout';
-import { StatusBadge } from '../components/molecules/StatusBadge';
 import { LoadingSpinner } from '../components/molecules/LoadingSpinner';
 import { Button } from '../components/atoms/Button';
 import { Input } from '../components/atoms/Input';
@@ -10,17 +9,14 @@ import { Select } from '../components/atoms/Select';
 import { useAuth } from '../context/AuthContext';
 import { 
   Plus, 
-  Search, 
   FileText, 
   Edit, 
   Trash2,
-  Download,
   Eye,
   AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ReportFilters, MachineType, ReportStatus } from '../types';
-import { generateReportPDF } from '../utils/pdf';
+import { ReportFilters, ReportStatus } from '../types';
 
 export const ReportsPage: React.FC = () => {
   const [filters, setFilters] = useState<ReportFilters>({});
@@ -72,14 +68,6 @@ export const ReportsPage: React.FC = () => {
       setDeleteConfirm(null);
     } catch (error) {
       console.error('Error deleting report:', error);
-    }
-  };
-
-  const handleDownloadPDF = async (report: any) => {
-    try {
-      await generateReportPDF(report);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
     }
   };
 
@@ -158,7 +146,7 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           {/* Reports Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl-grid-cols-3 gap-6">
             {reports.map((report) => (
               <div key={report.id} className="bg-slate-50 rounded-lg border border-slate-200 p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-4">
@@ -199,13 +187,6 @@ export const ReportsPage: React.FC = () => {
                       <Edit className="w-4 h-4" />
                     </Button>
                   </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownloadPDF(report)}
-                  >
-                    <Download className="w-4 h-4" />
-                  </Button>
                   {isAdmin && (
                     <Button
                       variant="ghost"
