@@ -1,14 +1,15 @@
 import React, { useRef, useState } from 'react';
 import { Button } from '../atoms/Button';
-import { Camera, X, Upload, Trash2 } from 'lucide-react';
+import { Camera, X, Upload, Trash2, Edit3 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface PhotoUploadProps {
-  photos: Array<File | { id: string; url: string; filename: string }>;
-  onPhotosChange: (photos: Array<File | { id: string; url: string; filename: string }>) => void;
+  photos: Array<File | { id: string; url: string; filename: string; photo_name?: string }>;
+  onPhotosChange: (photos: Array<File | { id: string; url: string; filename: string; photo_name?: string }>) => void;
   maxPhotos?: number;
   label?: string;
   onDeleteExistingPhoto?: (photoId: string) => Promise<void>;
+  onPhotoNameChange?: (photoId: string, newName: string) => Promise<void>;
 }
 
 export const PhotoUpload: React.FC<PhotoUploadProps> = ({
@@ -17,10 +18,13 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   maxPhotos = 10,
   label = 'Photos',
   onDeleteExistingPhoto,
+  onPhotoNameChange,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -63,19 +67,55 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     }
   };
 
+  const startEditingName = (photo: { id: string; url: string; filename: string; photo_name?: string }) => {
+    setEditingPhotoId(photo.id);
+    setEditingName(photo.photo_name || photo.filename);
+  };
+
+  const savePhotoName = async (photoId: string) => {
+    if (onPhotoNameChange) {
+      try {
+        await onPhotoNameChange(photoId, editingName);
+        // Actualizar la UI local
+        const newPhotos = photos.map(photo => 
+          typeof photo === 'object' && 'id' in photo && photo.id === photoId
+            ? { ...photo, photo_name: editingName }
+            : photo
+        );
+        onPhotosChange(newPhotos);
+      } catch (error) {
+        console.error('Error updating photo name:', error);
+      }
+    }
+    setEditingPhotoId(null);
+    setEditingName('');
+  };
+
+  const cancelEditing = () => {
+    setEditingPhotoId(null);
+    setEditingName('');
+  };
+
   const openFileDialog = () => {
     fileInputRef.current?.click();
   };
 
-  const isExistingPhoto = (photo: File | { id: string; url: string; filename: string }): boolean => {
+  const isExistingPhoto = (photo: File | { id: string; url: string; filename: string; photo_name?: string }): boolean => {
     return typeof photo === 'object' && 'id' in photo;
   };
 
-  const getPhotoSrc = (photo: File | { id: string; url: string; filename: string }): string => {
+  const getPhotoSrc = (photo: File | { id: string; url: string; filename: string; photo_name?: string }): string => {
     if (photo instanceof File) {
       return URL.createObjectURL(photo);
     }
     return photo.url;
+  };
+
+  const getPhotoName = (photo: File | { id: string; url: string; filename: string; photo_name?: string }): string => {
+    if (photo instanceof File) {
+      return photo.name;
+    }
+    return photo.photo_name || photo.filename;
   };
 
   return (
@@ -136,6 +176,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             const src = getPhotoSrc(photo);
             const isExisting = isExistingPhoto(photo);
             const isDeleting = isExisting && deletingPhotoId === (photo as any).id;
+            const isEditing = isExisting && editingPhotoId === (photo as any).id;
             
             return (
               <div key={index} className="relative group w-32 h-24">
@@ -144,7 +185,8 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                   alt={`Photo ${index + 1}`}
                   className={cn(
                     "w-full h-full object-cover rounded-lg border border-slate-200",
-                    isDeleting && "opacity-50"
+                    isDeleting && "opacity-50",
+                    isEditing && "border-blue-500"
                   )}
                   onLoad={() => {
                     if (photo instanceof File) URL.revokeObjectURL(src);
@@ -154,6 +196,11 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                 {isExisting && (
                   <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
                     Existing
+                  </div>
+                )}
+                {isEditing && (
+                  <div className="absolute top-1 right-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                    Editing
                   </div>
                 )}
                 <button
@@ -177,6 +224,42 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                     <X className="w-3 h-3" />
                   )}
                 </button>
+                {/* Photo Name Display/Edit */}
+                <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-90 p-1 rounded-b-lg">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={() => savePhotoName((photo as any).id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          savePhotoName((photo as any).id);
+                        } else if (e.key === 'Escape') {
+                          cancelEditing();
+                        }
+                      }}
+                      className="w-full text-xs text-slate-700 border border-slate-300 rounded-sm px-1 py-0.5 focus:outline-none focus:border-blue-500"
+                      placeholder="Enter photo name..."
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-700 truncate px-1">
+                        {getPhotoName(photo)}
+                      </span>
+                      {isExisting && (
+                        <button
+                          type="button"
+                          onClick={() => startEditingName(photo as any)}
+                          className="text-blue-500 hover:text-blue-700 p-1"
+                          title="Edit photo name"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

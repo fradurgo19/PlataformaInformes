@@ -1058,6 +1058,15 @@ export const NewReportPage: React.FC = () => {
     }
   };
 
+  const updatePhotoName = async (photoId: string, newName: string) => {
+    try {
+      await apiService.updatePhotoName(photoId, newName);
+    } catch (error) {
+      console.error('Error updating photo name:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateAllSteps()) {
       // Find the first step with an error and go to it
@@ -1440,6 +1449,7 @@ export const NewReportPage: React.FC = () => {
                 photos={component.photos}
                 onPhotosChange={(photos) => updateComponent(index, 'photos', photos)}
                 onDeleteExistingPhoto={deleteExistingPhoto}
+                onPhotoNameChange={updatePhotoName}
               />
             </div>
           </div>

@@ -81,8 +81,8 @@ export const createReport = async (req: Request, res: Response) => {
             const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
             await client.query(
               `INSERT INTO photos (
-                component_id, filename, original_name, file_path, file_size, mime_type
-              ) VALUES ($1, $2, $3, $4, $5, $6)`,
+                component_id, filename, original_name, file_path, file_size, mime_type, photo_name
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
               [
                 componentId,
                 photo.originalname,
@@ -90,6 +90,7 @@ export const createReport = async (req: Request, res: Response) => {
                 publicUrl,
                 size,
                 mimetype,
+                photo.originalname, // Default photo name is the original filename
               ]
             );
           }
@@ -476,9 +477,9 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
         // Subir a Supabase Storage y obtener info de la imagen comprimida
         const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
         await client.query(
-          `INSERT INTO photos (component_id, filename, original_name, file_path, file_size, mime_type)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [componentId, photo.originalname, photo.originalname, publicUrl, size, mimetype]
+          `INSERT INTO photos (component_id, filename, original_name, file_path, file_size, mime_type, photo_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [componentId, photo.originalname, photo.originalname, publicUrl, size, mimetype, photo.originalname]
         );
       }
     }

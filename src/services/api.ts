@@ -539,6 +539,16 @@ class ApiService {
     return this.handleResponse<boolean>(response);
   }
 
+  async updatePhotoName(photoId: string, photoName: string): Promise<ApiResponse<{ id: string; photo_name: string }>> {
+    const response = await fetch(`${API_BASE_URL}/photos/${photoId}/name`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ photo_name: photoName }),
+    });
+
+    return this.handleResponse<{ id: string; photo_name: string }>(response);
+  }
+
   async updateUser(id: string, userData: { 
     full_name: string; 
     email: string; 

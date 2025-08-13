@@ -65,6 +65,7 @@ export interface Photo {
   file_path: string;
   file_size: number;
   mime_type: string;
+  photo_name?: string; // Optional custom name for the photo
   created_at: string;
 }
 

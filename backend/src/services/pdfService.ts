@@ -47,7 +47,14 @@ export class PDFService {
             const imageBuffer = await fs.promises.readFile(imagePath);
             imageBase64 = imageBuffer.toString('base64');
           }
-          return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" class="photo-item" style="object-fit: cover;">`;
+          
+          // Mostrar nombre de la foto si existe
+          const photoName = photo.photo_name || photo.original_name || 'Photo';
+          return `
+            <div style="text-align: center; margin-bottom: 10px;">
+              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="object-fit: cover;">
+              <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
+            </div>`;
         } catch (error) {
           console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
           return `<div class="photo-item" style="border: 1px dashed #ccc; text-align: center; padding: 10px; display: flex; align-items: center; justify-content: center;">Image not found</div>`;
@@ -242,7 +249,13 @@ export class PDFService {
             const imageBuffer = await fs.promises.readFile(imagePath);
             imageBase64 = imageBuffer.toString('base64');
           }
-          return `<img src="data:${mimeType};base64,${imageBase64}" alt="Foto del componente" class="photo-item" style="object-fit: cover;">`;
+          // Mostrar nombre de la foto si existe
+          const photoName = photo.photo_name || photo.original_name || 'Photo';
+          return `
+            <div style="text-align: center; margin-bottom: 10px;">
+              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="object-fit: cover;">
+              <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
+            </div>`;
         } catch (error) {
           console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
           return `<div class="photo-item" style="border: 1px dashed #ccc; text-align: center; padding: 10px; display: flex; align-items: center; justify-content: center;">Image not found</div>`;
