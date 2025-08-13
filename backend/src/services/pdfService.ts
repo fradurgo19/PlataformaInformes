@@ -335,6 +335,8 @@ export class PDFService {
           .status-draft { background-color: #fef3c7; color: #92400e; }
           .status-completed { background-color: #d1fae5; color: #065f46; }
           .status-archived { background-color: #e5e7eb; color: #374151; }
+          .photos-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+          .photo-item { width: 200px; height: 150px; margin: 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
           .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
         </style>
       </head>
