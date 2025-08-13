@@ -493,7 +493,7 @@ class ApiService {
     return this.handleResponse<Parameter[]>(response);
   }
 
-  async createParameter(data: { parameter: string; parameter_type: string; model: string; min_range: number; max_range: number; resource_url: string; observation?: string }): Promise<ApiResponse<Parameter>> {
+  async createParameter(data: { parameter: string; parameter_type: string; model: string; min_range: number; max_range: number; limit_range?: string; resource_url: string; observation?: string }): Promise<ApiResponse<Parameter>> {
     const response = await fetch(`${API_BASE_URL}/parameters`, {
       method: 'POST',
       headers: this.getHeaders(),

@@ -53,6 +53,7 @@ export interface Parameter {
   model: string;
   min_range: number;
   max_range: number;
+  limit_range?: string;
   resource_url: string;
   observation?: string;
   created_at: string;

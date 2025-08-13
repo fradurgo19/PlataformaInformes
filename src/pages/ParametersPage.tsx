@@ -12,7 +12,7 @@ export const ParametersPage: React.FC = () => {
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', resource_url: '', observation: '' });
+  const [form, setForm] = useState({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', limit_range: '', resource_url: '', observation: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
@@ -47,7 +47,7 @@ export const ParametersPage: React.FC = () => {
     e.preventDefault();
     setFormError(null);
     if (!form.parameter || !form.parameter_type || !form.model || !form.min_range || !form.max_range || !form.resource_url) {
-      setFormError('All fields are required');
+      setFormError('All required fields must be completed');
       return;
     }
     setSubmitting(true);
@@ -58,11 +58,12 @@ export const ParametersPage: React.FC = () => {
         model: form.model,
         min_range: parseFloat(form.min_range),
         max_range: parseFloat(form.max_range),
+        limit_range: form.limit_range || undefined,
         resource_url: form.resource_url,
         observation: form.observation,
       });
       if (data.success) {
-        setForm({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', resource_url: '', observation: '' });
+        setForm({ parameter: '', parameter_type: '', model: '', min_range: '', max_range: '', limit_range: '', resource_url: '', observation: '' });
         fetchParameters();
       } else {
         setFormError(data.error || 'Error creating parameter');
@@ -154,6 +155,13 @@ export const ParametersPage: React.FC = () => {
                   required
                 />
                 <Input
+                  label="Limit Range (optional)"
+                  name="limit_range"
+                  value={form.limit_range}
+                  onChange={handleInputChange}
+                  placeholder="E.g. 85-95"
+                />
+                <Input
                   label="Resource URL"
                   name="resource_url"
                   value={form.resource_url}
@@ -206,6 +214,7 @@ export const ParametersPage: React.FC = () => {
                     <th className="border px-2 py-1">Model</th>
                     <th className="border px-2 py-1">Minimum Range</th>
                     <th className="border px-2 py-1">Maximum Range</th>
+                    <th className="border px-2 py-1">Limit Range</th>
                     <th className="border px-2 py-1">Resource</th>
                     <th className="border px-2 py-1">Observation</th>
                     {authState.user?.role === 'admin' && (
@@ -221,6 +230,7 @@ export const ParametersPage: React.FC = () => {
                       <td className="border px-2 py-1">{p.model}</td>
                       <td className="border px-2 py-1">{p.min_range}</td>
                       <td className="border px-2 py-1">{p.max_range}</td>
+                      <td className="border px-2 py-1">{p.limit_range || '-'}</td>
                       <td className="border px-2 py-1">
                         <a href={p.resource_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
                           View Resource
@@ -244,7 +254,7 @@ export const ParametersPage: React.FC = () => {
                   ))}
                   {filteredParameters.length === 0 && (
                     <tr>
-                      <td colSpan={authState.user?.role === 'admin' ? 8 : 7} className="text-center text-slate-400 py-4">No parameters found</td>
+                      <td colSpan={authState.user?.role === 'admin' ? 9 : 8} className="text-center text-slate-400 py-4">No parameters found</td>
                     </tr>
                   )}
                 </tbody>
