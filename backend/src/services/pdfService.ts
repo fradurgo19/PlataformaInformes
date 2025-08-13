@@ -52,7 +52,7 @@ export class PDFService {
           const photoName = photo.photo_name || photo.original_name || 'Photo';
           return `
             <div style="text-align: center; margin-bottom: 10px;">
-              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="object-fit: cover;">
+              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="width: 100%; height: 100%; object-fit: contain;">
               <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
             </div>`;
         } catch (error) {
@@ -65,7 +65,7 @@ export class PDFService {
       const photosHTML = photosHTMLArray.join('');
 
       return `
-        <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
+        <div style="margin: 12px 0; padding: 8px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
           <p><strong>Hallazgos / Findings:</strong> ${this.processTextWithLineBreaks(component.findings)}</p>
           ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
@@ -149,7 +149,7 @@ export class PDFService {
           .status-draft { background-color: #fef3c7; color: #92400e; }
           .status-completed { background-color: #d1fae5; color: #065f46; }
           .status-archived { background-color: #e5e7eb; color: #374151; }
-          .photos-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+          .photos-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
           .photo-item { width: 200px; height: 150px; margin: 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
           .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
         </style>
@@ -253,7 +253,7 @@ export class PDFService {
           const photoName = photo.photo_name || photo.original_name || 'Photo';
           return `
             <div style="text-align: center; margin-bottom: 10px;">
-              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="object-fit: cover;">
+              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="width: 100%; height: 100%; object-fit: contain;">
               <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
             </div>`;
         } catch (error) {
@@ -266,7 +266,7 @@ export class PDFService {
       const photosHTML = photosHTMLArray.join('');
 
       return `
-        <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
+        <div style="margin: 12px 0; padding: 8px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
           <p><strong>Hallazgos / Findings:</strong> ${this.processTextWithLineBreaks(component.findings)}</p>
           ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
@@ -444,12 +444,7 @@ export class PDFService {
       await page.setContent(html, { waitUntil: 'networkidle0' });
       const pdfBuffer = await page.pdf({
         format: 'A4',
-        margin: {
-          top: '20mm',
-          right: '15mm',
-          bottom: '20mm',
-          left: '15mm'
-        },
+        margin: { top: '10mm', right: '10mm', bottom: '12mm', left: '10mm' },
         printBackground: true,
         displayHeaderFooter: false
       });
@@ -479,12 +474,7 @@ export class PDFService {
       await page.setContent(html, { waitUntil: 'networkidle0' });
       const pdfBuffer = await page.pdf({
         format: 'A4',
-        margin: {
-          top: '20mm',
-          right: '15mm',
-          bottom: '20mm',
-          left: '15mm'
-        },
+        margin: { top: '10mm', right: '10mm', bottom: '12mm', left: '10mm' },
         printBackground: true,
         displayHeaderFooter: false
       });
