@@ -89,10 +89,10 @@ export const BulkImportParameters: React.FC<BulkImportParametersProps> = ({ onIm
   };
 
   const downloadTemplate = () => {
-    const csvContent = `parameter,parameter_type,model,min_range,max_range,resource_url,observation
-Oil Pressure,Sensor,CATERPILLAR 320D,10,100,https://example.com/oil-pressure,Monitor oil pressure regularly
-Engine Temperature,Sensor,CATERPILLAR 320D,50,120,https://example.com/engine-temp,Check for overheating conditions
-Hydraulic Pressure,Sensor,CATERPILLAR 320D,0,300,https://example.com/hydraulic-pressure,Verify hydraulic system performance`;
+    const csvContent = `parameter,parameter_type,model,min_range,max_range,limit_range,resource_url,observation
+Oil Pressure,Sensor,CATERPILLAR 320D,10,100,85-95,https://example.com/oil-pressure,Monitor oil pressure regularly
+Engine Temperature,Sensor,CATERPILLAR 320D,50,120,90-110,https://example.com/engine-temp,Check for overheating conditions
+Hydraulic Pressure,Sensor,CATERPILLAR 320D,0,300,250-280,https://example.com/hydraulic-pressure,Verify hydraulic system performance`;
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -135,7 +135,7 @@ Hydraulic Pressure,Sensor,CATERPILLAR 320D,0,300,https://example.com/hydraulic-p
              Upload a CSV or Excel file with parameters
            </p>
            <p className="text-xs text-slate-500 mb-4">
-             File must include: parameter, parameter_type, model, min_range, max_range, resource_url, observation
+             File must include: parameter, parameter_type, model, min_range, max_range, limit_range (optional), resource_url, observation
            </p>
                      <input
              ref={fileInputRef}
