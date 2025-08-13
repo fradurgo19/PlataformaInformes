@@ -52,7 +52,7 @@ export class PDFService {
           const photoName = photo.photo_name || photo.original_name || 'Photo';
           return `
             <div style="text-align: center; margin-bottom: 10px;">
-              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="width: 100%; height: 100%; object-fit: contain;">
+              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="max-width: 100%; max-height: 150px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto;">
               <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
             </div>`;
         } catch (error) {
@@ -150,7 +150,7 @@ export class PDFService {
           .status-completed { background-color: #d1fae5; color: #065f46; }
           .status-archived { background-color: #e5e7eb; color: #374151; }
           .photos-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
-          .photo-item { width: 200px; height: 150px; margin: 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+          .photo-item { max-width: 200px; max-height: 150px; margin: 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
           .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
         </style>
       </head>
@@ -253,7 +253,7 @@ export class PDFService {
           const photoName = photo.photo_name || photo.original_name || 'Photo';
           return `
             <div style="text-align: center; margin-bottom: 10px;">
-              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="width: 100%; height: 100%; object-fit: contain;">
+              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="max-width: 100%; max-height: 150px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto;">
               <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
             </div>`;
         } catch (error) {
@@ -348,8 +348,8 @@ export class PDFService {
           .status-draft { background-color: #fef3c7; color: #92400e; }
           .status-completed { background-color: #d1fae5; color: #065f46; }
           .status-archived { background-color: #e5e7eb; color: #374151; }
-          .photos-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
-          .photo-item { width: 200px; height: 150px; margin: 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+          .photos-container { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+          .photo-item { max-width: 200px; max-height: 150px; margin: 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
           .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
         </style>
       </head>
