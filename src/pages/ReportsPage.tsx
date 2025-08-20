@@ -22,8 +22,10 @@ export const ReportsPage: React.FC = () => {
   const [filters, setFilters] = useState<ReportFilters>({});
   const [pendingClientName, setPendingClientName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   
-  const { data: reportsData, isLoading, error } = useReports(filters);
+  const { data: reportsData, isLoading, error } = useReports({ ...filters, page: currentPage, limit: pageSize });
   const deleteReportMutation = useDeleteReport();
   const { state: { user } } = useAuth();
   
@@ -74,6 +76,8 @@ export const ReportsPage: React.FC = () => {
   const clearFilters = () => {
     setFilters({});
     setPendingClientName('');
+    setCurrentPage(1);
+    setPageSize(20);
   };
 
   if (isLoading) {
@@ -143,6 +147,20 @@ export const ReportsPage: React.FC = () => {
             <Button variant="outline" onClick={clearFilters}>
               Clear Filters
             </Button>
+            <Select
+              options={[
+                { value: '10', label: '10 per page' },
+                { value: '20', label: '20 per page' },
+                { value: '50', label: '50 per page' },
+                { value: '100', label: '100 per page' }
+              ]}
+              value={pageSize.toString()}
+              onChange={(e) => {
+                setPageSize(parseInt(e.target.value));
+                setCurrentPage(1);
+              }}
+              placeholder="Page size"
+            />
           </div>
 
           {/* Reports Grid */}
@@ -201,6 +219,49 @@ export const ReportsPage: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {reportsData && reportsData.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+              <div className="text-sm text-slate-600">
+                Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, reportsData.total)} of {reportsData.total} reports
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, reportsData.totalPages) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(reportsData.totalPages, currentPage - 2 + i));
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "primary" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-10 h-8"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(reportsData.totalPages, prev + 1))}
+                  disabled={currentPage === reportsData.totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
 
           {reports.length === 0 && (
             <div className="text-center py-12">

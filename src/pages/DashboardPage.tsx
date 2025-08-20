@@ -27,7 +27,9 @@ export const DashboardPage: React.FC = () => {
   const [clientNameInput, setClientNameInput] = useState('');
   const [pendingClientName, setPendingClientName] = useState('');
   const [serialNumberInput, setSerialNumberInput] = useState('');
-  const { data: reportsData, isLoading, error } = useReports(filters);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const { data: reportsData, isLoading, error } = useReports({ ...filters, page: currentPage, limit: pageSize });
   const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [machineTypes, setMachineTypes] = useState<{ value: string; label: string }[]>([]);
@@ -76,6 +78,7 @@ export const DashboardPage: React.FC = () => {
     setPendingClientName('');
     setSerialNumberInput('');
     setSelectedUserId('');
+    setCurrentPage(1);
   };
 
 
@@ -237,7 +240,7 @@ export const DashboardPage: React.FC = () => {
                 value={statusGeneral}
                 onChange={e => {
                   setStatusGeneral(e.target.value);
-                  setFilters(prev => ({ ...prev, general_status: e.target.value || undefined }));
+                  setFilters(prev => ({ ...prev, general_status: e.target.value as 'PENDING' | 'CLOSED' | undefined }));
                 }}
                 placeholder="Filter by status"
               />
@@ -246,6 +249,20 @@ export const DashboardPage: React.FC = () => {
                 value={selectedUserId}
                 onChange={e => handleUserFilterChange(e.target.value)}
                 placeholder="Filter by user"
+              />
+              <Select
+                options={[
+                  { value: '10', label: '10 per page' },
+                  { value: '20', label: '20 per page' },
+                  { value: '50', label: '50 per page' },
+                  { value: '100', label: '100 per page' }
+                ]}
+                value={pageSize.toString()}
+                onChange={(e) => {
+                  setPageSize(parseInt(e.target.value));
+                  setCurrentPage(1);
+                }}
+                placeholder="Page size"
               />
               <div className="md:col-span-5 flex justify-end">
                 <Button variant="outline" size="sm" onClick={clearFilters}>
@@ -318,6 +335,49 @@ export const DashboardPage: React.FC = () => {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {reportsData && reportsData.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+                <div className="text-sm text-slate-600">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, reportsData.total)} of {reportsData.total} reports
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, reportsData.totalPages) }, (_, i) => {
+                      const pageNum = Math.max(1, Math.min(reportsData.totalPages, currentPage - 2 + i));
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "primary" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="w-10 h-8"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(reportsData.totalPages, prev + 1))}
+                    disabled={currentPage === reportsData.totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {reports.length === 0 && (
               <div className="text-center py-12">
