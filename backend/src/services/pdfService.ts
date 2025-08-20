@@ -201,7 +201,7 @@ export class PDFService {
 
         ${suggestedParts.length > 0 ? `
         <div class="section">
-          <h2>🛠️ Partes Sugeridas / Suggested Parts</h2>
+          <h2>🛠️ Partes Sugeridas y Actividades / Suggested Parts and Activities</h2>
           ${suggestedPartsHTML}
         </div>
         ` : ''}
@@ -397,7 +397,7 @@ export class PDFService {
 
         ${suggestedParts.length > 0 ? `
         <div class="section">
-          <h2>🛠️ Partes Sugeridas / Suggested Parts</h2>
+          <h2>🛠️ Partes Sugeridas y Actividades / Suggested Parts and Activities</h2>
           ${suggestedPartsHTML}
         </div>
         ` : ''}

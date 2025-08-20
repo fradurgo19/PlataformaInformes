@@ -102,7 +102,7 @@ export const generateReportPDF = async (report: Report, elementId?: string): Pro
       }
 
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Suggested Parts:', margin, yPosition);
+      pdf.text('Suggested Parts and Activities:', margin, yPosition);
       yPosition += 10;
 
       report.suggested_parts.forEach((part, index) => {
