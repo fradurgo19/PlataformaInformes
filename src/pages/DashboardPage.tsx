@@ -352,9 +352,30 @@ export const DashboardPage: React.FC = () => {
                     Previous
                   </Button>
                   <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.min(5, reportsData.totalPages) }, (_, i) => {
-                      const pageNum = Math.max(1, Math.min(reportsData.totalPages, currentPage - 2 + i));
-                      return (
+                    {(() => {
+                      const totalPages = reportsData.totalPages;
+                      const current = currentPage;
+                      const pages = [];
+                      
+                      // Calcular rango de páginas a mostrar
+                      let startPage = Math.max(1, current - 2);
+                      let endPage = Math.min(totalPages, current + 2);
+                      
+                      // Ajustar si estamos cerca del inicio o final
+                      if (endPage - startPage < 4) {
+                        if (startPage === 1) {
+                          endPage = Math.min(totalPages, startPage + 4);
+                        } else {
+                          startPage = Math.max(1, endPage - 4);
+                        }
+                      }
+                      
+                      // Generar números de página únicos
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(i);
+                      }
+                      
+                      return pages.map(pageNum => (
                         <Button
                           key={pageNum}
                           variant={currentPage === pageNum ? "primary" : "outline"}
@@ -364,8 +385,8 @@ export const DashboardPage: React.FC = () => {
                         >
                           {pageNum}
                         </Button>
-                      );
-                    })}
+                      ));
+                    })()}
                   </div>
                   <Button
                     variant="outline"
