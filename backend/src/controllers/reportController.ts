@@ -77,15 +77,19 @@ export const createReport = async (req: Request, res: Response) => {
 
         if (componentPhotos.length > 0) {
           for (const photo of componentPhotos) {
+            // Generar nombre único para el archivo en Supabase Storage
+            const timestamp = Date.now();
+            const uniqueFileName = `report_${report.id}_component_${componentId}_${timestamp}_${photo.originalname}`;
+            
             // Subir a Supabase Storage y obtener info de la imagen comprimida
-            const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
+            const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, uniqueFileName, photo.mimetype);
             await client.query(
               `INSERT INTO photos (
                 component_id, filename, original_name, file_path, file_size, mime_type, photo_name
               ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
               [
                 componentId,
-                photo.originalname,
+                uniqueFileName,
                 photo.originalname,
                 publicUrl,
                 size,
@@ -474,12 +478,16 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
       // Add new photos
       const newPhotos = files.filter(file => file.fieldname === `photos_${index}`);
       for (const photo of newPhotos) {
+        // Generar nombre único para el archivo en Supabase Storage
+        const timestamp = Date.now();
+        const uniqueFileName = `report_${reportId}_component_${componentId}_${timestamp}_${photo.originalname}`;
+        
         // Subir a Supabase Storage y obtener info de la imagen comprimida
-        const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, photo.originalname, photo.mimetype);
+        const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, uniqueFileName, photo.mimetype);
         await client.query(
           `INSERT INTO photos (component_id, filename, original_name, file_path, file_size, mime_type, photo_name)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [componentId, photo.originalname, photo.originalname, publicUrl, size, mimetype, photo.originalname]
+          [componentId, uniqueFileName, photo.originalname, publicUrl, size, mimetype, photo.originalname]
         );
       }
     }

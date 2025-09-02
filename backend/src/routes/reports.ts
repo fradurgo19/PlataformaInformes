@@ -109,7 +109,18 @@ router.delete('/photos/:photoId', authenticateToken as any, async (req, res) => 
       return res.status(403).json({ success: false, error: 'Report is CLOSED and cannot be edited' });
     }
 
-    // Delete the photo
+    // Delete the photo from Supabase Storage first
+    if (photo.file_path && photo.file_path.startsWith('http')) {
+      try {
+        const { deleteFilesFromSupabase } = await import('../utils/supabaseStorage');
+        await deleteFilesFromSupabase(photo.file_path);
+      } catch (error) {
+        console.error('Error deleting photo from Supabase:', error);
+        // Continue with database deletion even if storage deletion fails
+      }
+    }
+
+    // Delete the photo from database
     await pool.query('DELETE FROM photos WHERE id = $1', [photoId]);
 
     return res.json({ success: true, message: 'Photo deleted successfully' });
