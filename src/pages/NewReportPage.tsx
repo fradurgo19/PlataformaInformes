@@ -1156,11 +1156,11 @@ export const NewReportPage: React.FC = () => {
         } else if (error.message.includes('CLOSED')) {
           setErrors({ submit: 'This report is closed and cannot be edited.' });
         } else if (error.message.includes('Request too large') || error.message.includes('413')) {
-          setErrors({ submit: 'The request is too large. Please reduce the number of photos (max 20) or compress them more (max 1MB each).' });
+          setErrors({ submit: 'The request is too large. Please reduce the number of photos or their size. Maximum is 100 photos per report.' });
         } else if (error.message.includes('Too many files')) {
-          setErrors({ submit: 'Too many photos. Maximum is 20 photos per request. Please upload in smaller batches.' });
+          setErrors({ submit: 'Too many photos. Maximum is 100 photos per report.' });
         } else if (error.message.includes('File too large')) {
-          setErrors({ submit: 'One or more photos are too large. Maximum size is 1MB per photo. Please compress your images before uploading.' });
+          setErrors({ submit: 'One or more photos are too large. Maximum size is 30MB per photo.' });
         } else if (error.message.includes('Failed to parse response')) {
           setErrors({ submit: 'Server error. Please try again with fewer photos or contact support.' });
         } else {
@@ -1451,10 +1451,10 @@ export const NewReportPage: React.FC = () => {
                   <div className="text-sm text-blue-800">
                     <p className="font-medium mb-1">Photo Upload Guidelines:</p>
                     <ul className="text-xs space-y-1">
-                      <li>• Maximum 1MB per photo (images will be automatically compressed)</li>
-                      <li>• Maximum 20 photos per request</li>
+                      <li>• Maximum 30MB per photo</li>
+                      <li>• Maximum 100 photos per report</li>
                       <li>• Supported formats: JPEG, PNG, GIF, WebP</li>
-                      <li>• Photos will be resized to 800px max width/height</li>
+                      <li>• Photos will be automatically compressed and resized to 800px max</li>
                     </ul>
                   </div>
                 </div>
