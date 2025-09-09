@@ -83,10 +83,10 @@ app.use(sanitizeAll);
 
 // Error handling middleware for request size limits
 app.use((error: any, req: any, res: any, next: any) => {
-  if (error.status === 413) {
+  if (error.status === 413 || error.code === 'LIMIT_FIELD_VALUE') {
     return res.status(413).json({
       success: false,
-      error: 'Request too large. Please reduce the number of photos or their size.'
+      error: 'Request too large. Please reduce the number of photos (max 20) or compress them more (max 1MB each).'
     });
   }
   

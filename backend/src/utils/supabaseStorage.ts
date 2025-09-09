@@ -12,12 +12,12 @@ export async function uploadFileToSupabase(fileBuffer: Buffer, fileName: string,
   let bufferToUpload = fileBuffer;
   let uploadMime = mimetype;
 
-  // Comprimir solo imágenes JPEG o PNG
+  // Comprimir solo imágenes JPEG o PNG - Optimizado para Vercel
   if (mimetype === 'image/jpeg' || mimetype === 'image/png') {
-    // Redimensionar a máximo 1024px de ancho/alto y comprimir
+    // Redimensionar a máximo 800px de ancho/alto y comprimir más agresivamente
     bufferToUpload = await sharp(fileBuffer)
-      .resize({ width: 1024, height: 1024, fit: 'inside' })
-      .jpeg({ quality: 70 })
+      .resize({ width: 800, height: 800, fit: 'inside' })
+      .jpeg({ quality: 60, progressive: true })
       .toBuffer();
     uploadMime = 'image/jpeg';
   }

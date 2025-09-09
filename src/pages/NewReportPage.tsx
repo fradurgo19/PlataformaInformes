@@ -1156,11 +1156,11 @@ export const NewReportPage: React.FC = () => {
         } else if (error.message.includes('CLOSED')) {
           setErrors({ submit: 'This report is closed and cannot be edited.' });
         } else if (error.message.includes('Request too large') || error.message.includes('413')) {
-          setErrors({ submit: 'The request is too large. Please reduce the number of photos or their size. Maximum is 100 photos per report.' });
+          setErrors({ submit: 'The request is too large. Please reduce the number of photos (max 20) or compress them more (max 1MB each).' });
         } else if (error.message.includes('Too many files')) {
-          setErrors({ submit: 'Too many photos. Maximum is 100 photos per report.' });
+          setErrors({ submit: 'Too many photos. Maximum is 20 photos per request. Please upload in smaller batches.' });
         } else if (error.message.includes('File too large')) {
-          setErrors({ submit: 'One or more photos are too large. Maximum size is 30MB per photo.' });
+          setErrors({ submit: 'One or more photos are too large. Maximum size is 1MB per photo. Please compress your images before uploading.' });
         } else if (error.message.includes('Failed to parse response')) {
           setErrors({ submit: 'Server error. Please try again with fewer photos or contact support.' });
         } else {
@@ -1443,6 +1443,22 @@ export const NewReportPage: React.FC = () => {
                 onChange={(e) => updateComponent(index, 'suggestions', e.target.value)}
                 placeholder="Provide suggestions for this component"
               />
+
+              {/* Photo Upload Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-start">
+                  <AlertCircle className="w-4 h-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium mb-1">Photo Upload Guidelines:</p>
+                    <ul className="text-xs space-y-1">
+                      <li>• Maximum 1MB per photo (images will be automatically compressed)</li>
+                      <li>• Maximum 20 photos per request</li>
+                      <li>• Supported formats: JPEG, PNG, GIF, WebP</li>
+                      <li>• Photos will be resized to 800px max width/height</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
 
               <PhotoUpload
                 label="Photos"
