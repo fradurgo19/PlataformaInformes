@@ -68,53 +68,13 @@ export const NewReportPage: React.FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Convert machine types to options (lista fija y ordenada alfabéticamente)
-  const machineTypeOptions = [
-    { value: 'ADITAMENTOS / ATTACHMENTS', label: 'ADITAMENTOS / ATTACHMENTS' },
-    { value: 'AHOYADOR / AUGER', label: 'AHOYADOR / AUGER' },
-    { value: 'ASFALTADORA / ASPHALT PAVER', label: 'ASFALTADORA / ASPHALT PAVER' },
-    { value: 'AUTOMOVILES / AUTOMOBILES', label: 'AUTOMOVILES / AUTOMOBILES' },
-    { value: 'BARCAZA / BARGE', label: 'BARCAZA / BARGE' },
-    { value: 'BRAZO EXCAVADOR / EXCAVATOR ARM', label: 'BRAZO EXCAVADOR / EXCAVATOR ARM' },
-    { value: 'BULLDOZER / BULLDOZER', label: 'BULLDOZER / BULLDOZER' },
-    { value: 'BUS / BUS', label: 'BUS / BUS' },
-    { value: 'CABINA / CABIN', label: 'CABINA / CABIN' },
-    { value: 'CAMA BAJA / LOWBOY TRAILER', label: 'CAMA BAJA / LOWBOY TRAILER' },
-    { value: 'CAMION / TRUCK', label: 'CAMION / TRUCK' },
-    { value: 'CAMIONETA / PICKUP TRUCK', label: 'CAMIONETA / PICKUP TRUCK' },
-    { value: 'CAMPERO / SUV', label: 'CAMPERO / SUV' },
-    { value: 'CARGADOR / LOADER', label: 'CARGADOR / LOADER' },
-    { value: 'CLASIFICADORAS / SCREENING MACHINES', label: 'CLASIFICADORAS / SCREENING MACHINES' },
-    { value: 'COMPACTADOR / COMPACTOR', label: 'COMPACTADOR / COMPACTOR' },
-    { value: 'COSECHADORAS ACUATICAS / AQUATIC HARVESTERS', label: 'COSECHADORAS ACUATICAS / AQUATIC HARVESTERS' },
-    { value: 'CRIBA / SCREEN', label: 'CRIBA / SCREEN' },
-    { value: 'EQUIPO MENOR / SMALL EQUIPMENT', label: 'EQUIPO MENOR / SMALL EQUIPMENT' },
-    { value: 'EXCAVADORA / EXCAVATOR', label: 'EXCAVADORA / EXCAVATOR' },
-    { value: 'FRESADORA / MILLING MACHINE', label: 'FRESADORA / MILLING MACHINE' },
-    { value: 'GRADER / GRADER', label: 'GRADER / GRADER' },
-    { value: 'GRÚA / CRANE', label: 'GRÚA / CRANE' },
-    { value: 'LOADER / LOADER', label: 'LOADER / LOADER' },
-    { value: 'MARTILLO HIDRÁULICO / BREAKER', label: 'MARTILLO HIDRÁULICO / BREAKER' },
-    { value: 'MINICARGADOR / SKID STEER LOADER', label: 'MINICARGADOR / SKID STEER LOADER' },
-    { value: 'MINIEXCAVADORA / MINI EXCAVATOR', label: 'MINIEXCAVADORA / MINI EXCAVATOR' },
-    { value: 'MINIMULA / SMALL SEMI-TRAILER TRUCK', label: 'MINIMULA / SMALL SEMI-TRAILER TRUCK' },
-    { value: 'MONTACARGAS / FORKLIFT', label: 'MONTACARGAS / FORKLIFT' },
-    { value: 'MOTONIVELADORA / MOTOR GRADER', label: 'MOTONIVELADORA / MOTOR GRADER' },
-    { value: 'MOTOR / ENGINE', label: 'MOTOR / ENGINE' },
-    { value: 'OTROS / OTHERS', label: 'OTROS / OTHERS' },
-    { value: 'PALADRAGA / DREDGER', label: 'PALADRAGA / DREDGER' },
-    { value: 'PERFORADORA / DRILLING MACHINE', label: 'PERFORADORA / DRILLING MACHINE' },
-    { value: 'PLANTA ELECTRICA / GENERATOR', label: 'PLANTA ELECTRICA / GENERATOR' },
-    { value: 'REPUESTOS / SPARE PARTS', label: 'REPUESTOS / SPARE PARTS' },
-    { value: 'RETROCARGADOR / BACKHOE LOADER', label: 'RETROCARGADOR / BACKHOE LOADER' },
-    { value: 'SOLDADORES / WELDERS', label: 'SOLDADORES / WELDERS' },
-    { value: 'TORRES DE ILUMINACION / LIGHT TOWERS', label: 'TORRES DE ILUMINACION / LIGHT TOWERS' },
-    { value: 'TRACTOCAMIONES / SEMI-TRAILER TRUCKS', label: 'TRACTOCAMIONES / SEMI-TRAILER TRUCKS' },
-    { value: 'TRACTOR / TRACTOR', label: 'TRACTOR / TRACTOR' },
-    { value: 'TRITURADORAS / CRUSHERS', label: 'TRITURADORAS / CRUSHERS' },
-    { value: 'VIBROCOMPACTADOR / VIBRATORY COMPACTOR', label: 'VIBROCOMPACTADOR / VIBRATORY COMPACTOR' },
-    { value: 'VOLQUETA / DUMP TRUCK', label: 'VOLQUETA / DUMP TRUCK' },
-  ];
+  // Convert machine types to options (obtenidos dinámicamente de la base de datos)
+  const machineTypeOptions = machineTypes
+    .map(mt => ({
+      value: mt.name,
+      label: mt.name
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label)); // Ordenar alfabéticamente
 
   // Convert component types to options
   const componentTypeOptions = componentTypes.map(ct => ({
