@@ -41,12 +41,16 @@ export const TypesProvider: React.FC<TypesProviderProps> = ({ children }) => {
     try {
       setError(null);
       const response = await apiService.getMachineTypes();
+      console.log('📦 TypesContext - Machine Types API Response:', response);
       if (response.success && response.data) {
+        console.log('✅ TypesContext - Setting machine types:', response.data.length);
         setMachineTypes(response.data);
+      } else {
+        console.warn('⚠️ TypesContext - No data in response or not successful');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching machine types');
-      console.error('Error fetching machine types:', err);
+      console.error('❌ Error fetching machine types:', err);
     }
   };
 

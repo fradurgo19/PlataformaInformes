@@ -75,6 +75,9 @@ export const NewReportPage: React.FC = () => {
       label: mt.name
     }))
     .sort((a, b) => a.label.localeCompare(b.label)); // Ordenar alfabéticamente
+  
+  // Debug: Log machine types count
+  console.log('🔍 Machine Types loaded:', machineTypes.length, machineTypeOptions.length);
 
   // Convert component types to options
   const componentTypeOptions = componentTypes.map(ct => ({
