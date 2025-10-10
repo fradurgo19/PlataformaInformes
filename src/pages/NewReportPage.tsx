@@ -76,7 +76,7 @@ export const NewReportPage: React.FC = () => {
     }))
     .sort((a, b) => a.label.localeCompare(b.label)); // Ordenar alfabéticamente
   
-  // Debug: Log machine types count
+  // Debug: Log machine types count - Force rebuild 2025-01-10
   console.log('🔍 Machine Types loaded:', machineTypes.length, machineTypeOptions.length);
 
   // Convert component types to options
