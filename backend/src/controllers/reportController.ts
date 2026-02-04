@@ -24,6 +24,12 @@ export const createReport = async (req: Request, res: Response) => {
     }
     const files = req.files as Express.Multer.File[];
     
+    // hourmeter is INTEGER in DB; coerce decimals (e.g. "64.7") to integer
+    const hourmeter =
+      reportData.hourmeter != null && reportData.hourmeter !== ''
+        ? Math.round(Number(reportData.hourmeter))
+        : 0;
+
     // Create report
     const reportResult = await client.query(
       `INSERT INTO reports (
@@ -37,7 +43,7 @@ export const createReport = async (req: Request, res: Response) => {
         reportData.machine_type,
         reportData.model,
         reportData.serial_number,
-        reportData.hourmeter,
+        hourmeter,
         reportData.report_date,
         reportData.ott,
         reportData.reason_of_service || null,
@@ -416,6 +422,12 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
     
     const files = req.files as Express.Multer.File[];
 
+    // hourmeter is INTEGER in DB; coerce decimals to integer
+    const hourmeter =
+      reportData.hourmeter != null && reportData.hourmeter !== ''
+        ? Math.round(Number(reportData.hourmeter))
+        : 0;
+
     // Start transaction after all validations
     await client.query('BEGIN');
 
@@ -428,7 +440,7 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
       WHERE id = $13 RETURNING *`,
       [
         reportData.client_name, reportData.machine_type, reportData.model,
-        reportData.serial_number, reportData.hourmeter, reportData.report_date,
+        reportData.serial_number, hourmeter, reportData.report_date,
         reportData.ott, reportData.reason_of_service, reportData.conclusions, reportData.overall_suggestions,
         reportData.status, reportData.general_status, reportId,
       ]
