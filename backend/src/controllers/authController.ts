@@ -5,6 +5,27 @@ import pool from '../config/database';
 import { User, LoginRequest, LoginResponse, ApiResponse } from '../types';
 import logger from '../utils/logger';
 
+/** Optional monetary/numeric fields from JSON (Sonar-friendly explicit parsing). */
+const optionalNum = (v: unknown): number | undefined => {
+  if (v === undefined || v === null || v === '') return undefined;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+};
+
+/** PostgreSQL accepts null for nullable NUMERIC; avoid passing undefined in query params. */
+const optionalDbNum = (v: unknown): number | null => optionalNum(v) ?? null;
+
+/** Optional trimmed text for nullable VARCHAR columns. */
+const optionalDbStr = (v: unknown): string | null => {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return s === '' ? null : s;
+};
+
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password }: LoginRequest = req.body;
@@ -90,6 +111,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, email, password, full_name, role = 'user', zone, brands, specialty, rating } = req.body;
+    const cost_mtto_250h = optionalDbNum(req.body.cost_mtto_250h);
+    const cost_mtto_500h = optionalDbNum(req.body.cost_mtto_500h);
+    const cost_mtto_1000h = optionalDbNum(req.body.cost_mtto_1000h);
+    const cost_mtto_2000h = optionalDbNum(req.body.cost_mtto_2000h);
+    const cost_desplazamiento_km = optionalDbNum(req.body.cost_desplazamiento_km);
+    const cost_hospedaje_dia = optionalDbNum(req.body.cost_hospedaje_dia);
+    const cost_alimentacion_dia = optionalDbNum(req.body.cost_alimentacion_dia);
+    const cost_hora_viaje_tecnico = optionalDbNum(req.body.cost_hora_viaje_tecnico);
+    const cost_valor_hora_mano_obra = optionalDbNum(req.body.cost_valor_hora_mano_obra);
+    const contact = optionalDbStr(req.body.contact);
+    const payment_method = optionalDbStr(req.body.payment_method);
 
     if (!username || !email || !password || !full_name) {
       res.status(400).json({
@@ -137,8 +169,43 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Create user
     const newUserResult = await pool.query(
-      'INSERT INTO users (username, email, password_hash, full_name, role, zone, brands, specialty, rating) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at',
-      [username, email, passwordHash, full_name, role, zone, brands, specialty, rating]
+      `INSERT INTO users (
+        username, email, password_hash, full_name, role, zone, brands, specialty, rating,
+        cost_mtto_250h, cost_mtto_500h, cost_mtto_1000h, cost_mtto_2000h,
+        cost_desplazamiento_km, cost_hospedaje_dia, cost_alimentacion_dia,
+        cost_hora_viaje_tecnico, cost_valor_hora_mano_obra,
+        contact, payment_method
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $10, $11, $12, $13, $14, $15, $16, $17, $18,
+        $19, $20
+      ) RETURNING id, username, email, full_name, role, zone, brands, specialty, rating,
+        cost_mtto_250h, cost_mtto_500h, cost_mtto_1000h, cost_mtto_2000h,
+        cost_desplazamiento_km, cost_hospedaje_dia, cost_alimentacion_dia,
+        cost_hora_viaje_tecnico, cost_valor_hora_mano_obra,
+        contact, payment_method, created_at, updated_at`,
+      [
+        username,
+        email,
+        passwordHash,
+        full_name,
+        role,
+        zone,
+        brands,
+        specialty,
+        rating,
+        cost_mtto_250h,
+        cost_mtto_500h,
+        cost_mtto_1000h,
+        cost_mtto_2000h,
+        cost_desplazamiento_km,
+        cost_hospedaje_dia,
+        cost_alimentacion_dia,
+        cost_hora_viaje_tecnico,
+        cost_valor_hora_mano_obra,
+        contact,
+        payment_method
+      ]
     );
 
     const newUser = newUserResult.rows[0];
@@ -164,7 +231,12 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     const userId = (req as any).user.id;
 
     const userResult = await pool.query(
-      'SELECT id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at FROM users WHERE id = $1',
+      `SELECT id, username, email, full_name, role, zone, brands, specialty, rating,
+        cost_mtto_250h, cost_mtto_500h, cost_mtto_1000h, cost_mtto_2000h,
+        cost_desplazamiento_km, cost_hospedaje_dia, cost_alimentacion_dia,
+        cost_hora_viaje_tecnico, cost_valor_hora_mano_obra,
+        contact, payment_method, created_at, updated_at
+       FROM users WHERE id = $1`,
       [userId]
     );
 
@@ -265,7 +337,12 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const usersResult = await pool.query(
-      'SELECT id, full_name, username, email, role, zone, brands, specialty, rating, created_at, updated_at FROM users ORDER BY full_name ASC'
+      `SELECT id, full_name, username, email, role, zone, brands, specialty, rating,
+        cost_mtto_250h, cost_mtto_500h, cost_mtto_1000h, cost_mtto_2000h,
+        cost_desplazamiento_km, cost_hospedaje_dia, cost_alimentacion_dia,
+        cost_hora_viaje_tecnico, cost_valor_hora_mano_obra,
+        contact, payment_method, created_at, updated_at
+       FROM users ORDER BY full_name ASC`
     );
     res.json({ success: true, data: usersResult.rows });
   } catch (error) {
@@ -278,6 +355,17 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   try {
     const { id } = req.params;
     const { full_name, email, role, password, zone, brands, specialty, rating } = req.body;
+    const cost_mtto_250h = optionalDbNum(req.body.cost_mtto_250h);
+    const cost_mtto_500h = optionalDbNum(req.body.cost_mtto_500h);
+    const cost_mtto_1000h = optionalDbNum(req.body.cost_mtto_1000h);
+    const cost_mtto_2000h = optionalDbNum(req.body.cost_mtto_2000h);
+    const cost_desplazamiento_km = optionalDbNum(req.body.cost_desplazamiento_km);
+    const cost_hospedaje_dia = optionalDbNum(req.body.cost_hospedaje_dia);
+    const cost_alimentacion_dia = optionalDbNum(req.body.cost_alimentacion_dia);
+    const cost_hora_viaje_tecnico = optionalDbNum(req.body.cost_hora_viaje_tecnico);
+    const cost_valor_hora_mano_obra = optionalDbNum(req.body.cost_valor_hora_mano_obra);
+    const contact = optionalDbStr(req.body.contact);
+    const payment_method = optionalDbStr(req.body.payment_method);
     const currentUser = (req as any).user;
 
     // Solo admins pueden editar usuarios
@@ -331,14 +419,69 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     let updateQuery = '';
     let params: any[] = [];
     
+    const returningCosts = `cost_mtto_250h, cost_mtto_500h, cost_mtto_1000h, cost_mtto_2000h,
+        cost_desplazamiento_km, cost_hospedaje_dia, cost_alimentacion_dia,
+        cost_hora_viaje_tecnico, cost_valor_hora_mano_obra, contact, payment_method`;
+
+    const costParams = [
+      cost_mtto_250h,
+      cost_mtto_500h,
+      cost_mtto_1000h,
+      cost_mtto_2000h,
+      cost_desplazamiento_km,
+      cost_hospedaje_dia,
+      cost_alimentacion_dia,
+      cost_hora_viaje_tecnico,
+      cost_valor_hora_mano_obra
+    ];
+
     if (password) {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(password, saltRounds);
-      updateQuery = 'UPDATE users SET full_name = $1, email = $2, role = $3, password_hash = $4, zone = $5, brands = $6, specialty = $7, rating = $8, updated_at = NOW() WHERE id = $9 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at';
-      params = [full_name, email, role, passwordHash, zone, brands, specialty, rating, id];
+      updateQuery = `UPDATE users SET full_name = $1, email = $2, role = $3, password_hash = $4,
+        zone = $5, brands = $6, specialty = $7, rating = $8,
+        cost_mtto_250h = $9, cost_mtto_500h = $10, cost_mtto_1000h = $11, cost_mtto_2000h = $12,
+        cost_desplazamiento_km = $13, cost_hospedaje_dia = $14, cost_alimentacion_dia = $15,
+        cost_hora_viaje_tecnico = $16, cost_valor_hora_mano_obra = $17,
+        contact = $18, payment_method = $19, updated_at = NOW()
+        WHERE id = $20 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating,
+        ${returningCosts}, created_at, updated_at`;
+      params = [
+        full_name,
+        email,
+        role,
+        passwordHash,
+        zone,
+        brands,
+        specialty,
+        rating,
+        ...costParams,
+        contact,
+        payment_method,
+        id
+      ];
     } else {
-      updateQuery = 'UPDATE users SET full_name = $1, email = $2, role = $3, zone = $4, brands = $5, specialty = $6, rating = $7, updated_at = NOW() WHERE id = $8 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at';
-      params = [full_name, email, role, zone, brands, specialty, rating, id];
+      updateQuery = `UPDATE users SET full_name = $1, email = $2, role = $3,
+        zone = $4, brands = $5, specialty = $6, rating = $7,
+        cost_mtto_250h = $8, cost_mtto_500h = $9, cost_mtto_1000h = $10, cost_mtto_2000h = $11,
+        cost_desplazamiento_km = $12, cost_hospedaje_dia = $13, cost_alimentacion_dia = $14,
+        cost_hora_viaje_tecnico = $15, cost_valor_hora_mano_obra = $16,
+        contact = $17, payment_method = $18, updated_at = NOW()
+        WHERE id = $19 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating,
+        ${returningCosts}, created_at, updated_at`;
+      params = [
+        full_name,
+        email,
+        role,
+        zone,
+        brands,
+        specialty,
+        rating,
+        ...costParams,
+        contact,
+        payment_method,
+        id
+      ];
     }
 
     const result = await pool.query(updateQuery, params);

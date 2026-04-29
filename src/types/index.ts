@@ -30,6 +30,17 @@ export interface User {
   brands?: string[];
   specialty?: string;
   rating?: number;
+  cost_mtto_250h?: number;
+  cost_mtto_500h?: number;
+  cost_mtto_1000h?: number;
+  cost_mtto_2000h?: number;
+  cost_desplazamiento_km?: number;
+  cost_hospedaje_dia?: number;
+  cost_alimentacion_dia?: number;
+  cost_hora_viaje_tecnico?: number;
+  cost_valor_hora_mano_obra?: number;
+  contact?: string | null;
+  payment_method?: string | null;
   created_at: string;
   updated_at: string;
 }

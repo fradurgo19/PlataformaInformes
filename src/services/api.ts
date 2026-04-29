@@ -83,6 +83,17 @@ class ApiService {
     brands?: string[];
     specialty?: string;
     rating?: number;
+    cost_mtto_250h?: number;
+    cost_mtto_500h?: number;
+    cost_mtto_1000h?: number;
+    cost_mtto_2000h?: number;
+    cost_desplazamiento_km?: number;
+    cost_hospedaje_dia?: number;
+    cost_alimentacion_dia?: number;
+    cost_hora_viaje_tecnico?: number;
+    cost_valor_hora_mano_obra?: number;
+    contact?: string;
+    payment_method?: string;
   }): Promise<ApiResponse<User>> {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
@@ -558,6 +569,17 @@ class ApiService {
     specialty?: string;
     rating?: number;
     password?: string;
+    cost_mtto_250h?: number;
+    cost_mtto_500h?: number;
+    cost_mtto_1000h?: number;
+    cost_mtto_2000h?: number;
+    cost_desplazamiento_km?: number;
+    cost_hospedaje_dia?: number;
+    cost_alimentacion_dia?: number;
+    cost_hora_viaje_tecnico?: number;
+    cost_valor_hora_mano_obra?: number;
+    contact?: string;
+    payment_method?: string;
   }): Promise<ApiResponse<User>> {
     const response = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
       method: 'PUT',
