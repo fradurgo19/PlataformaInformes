@@ -1,0 +1,163 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const targetPath = path.join(__dirname, '..', 'src', 'pages', 'NewReportPage.tsx');
+
+const additional = `CASE 1150L
+CASE 575SV
+CASE SR175B
+CASE SR200B
+CASE SR220B
+CASE CX220C
+CASE 580SN
+CASE 580N
+CASE 845B
+CASE 1107EX
+CASE CX240C
+CASE CX350C
+LBX 210X3
+LBX 130X3
+LBX 300X3
+LBX 360X3
+YANMAR VIO50-6B
+YANMAR VIO80-1
+YANMAR VIO17-1B
+YANMAR VIO35-6B
+CASE CX220C LC
+YANMAR VIO35-7
+HITACHI ZX200-5G
+HITACHI ZX130-5G
+CASE SR250B
+HITACHI ZX210LC-5B
+HITACHI ZX350LC-5B
+HITACHI ZX130-5B
+LIUGONG 922F
+LIUGONG 856H
+LIUGONG 933F
+LIUGONG 915F
+CASE SR210B
+CASE SR240B
+CASE 845C
+CASE 1650M
+CASE 580SV
+CASE 851FX
+LIUGONG 856HE
+DYNAPAC CC1300VI
+DYNAPAC CC1400VI
+DYNAPAC CC1400CVI
+DYNAPAC CA1500D
+DYNAPAC F1800C
+DYNAPAC CC2200VI
+DYNAPAC CP1200
+DYNAPAC CC1200VI
+BOMAG BM 1000/20
+BOMAG BM 500/15-2
+CASE 821G
+LIUGONG 920F
+LIUGONG 856H
+DYNAPAC F80W
+HITACHI ZX75US-7
+CASE SR270B
+CASE 865C
+DYNAPAC CA25D
+DYNAPAC CA15D
+DYNAPAC CC1200
+DYNAPAC CA1300D
+LIUGONG 915FW
+LIUGONG 4165D
+YANMAR VIO50-6
+YANMAR VIO80-7
+YANMAR VIO17
+HITACHI ZX75US-3
+HITACHI ZX135US-3
+HITACHI ZX200-3
+HITACHI ZX70-3
+HITACHI ZX75US
+HITACHI ZX225US-3
+HITACHI ZX120-5B
+HITACHI ZX120-3
+HITACHI ZX135US-5B
+HITACHI ZX130K-3
+HITACHI ZX40U-5B
+HITACHI ZX50U-3
+HITACHI ZX225USR-3
+HITACHI ZX210K-5B
+HITACHI ZX75US-5B
+HITACHI ZX135USK-5B
+HITACHI ZX200-5B
+HITACHI ZX50U-5B
+HITACHI ZX225US-5B
+HITACHI ZX75USK-5B
+HITACHI ZX240LC-5B
+HITACHI ZX200-6
+HITACHI ZX225USR-5B
+HITACHI ZX135US-6
+HITACHI ZX210LCH-5B
+HITACHI ZX350LC-6N
+HITACHI ZX200LC-6
+HITACHI ZX-200-6
+HITACHI ZX120-6
+HITACHI ZX225USRLCK-6
+HITACHI ZX210K-6
+HITACHI ZX130K-6
+HITACHI ZX330LC-5B
+HITACHI ZX240-6
+HITACHI ZX17U-5A
+HITACHI ZX350H-5B
+HITACHI ZX350-5B
+HITACHI ZX210LCK-6
+HITACHI ZX135US-6N
+HITACHI ZX135US
+HITACHI ZX210 LC
+HITACHI ZX300 LC-6
+HITACHI ZX345US LC-6N
+HITACHI ZX350LC-6
+HITACHI ZX17U-2
+HITACHI ZX225USR-6
+HITACHI ZX350K-5B
+HITACHI ZX225USRLC-5B
+HITACHI ZX135USK-6
+HITACHI ZX225USRK-6
+HITACHI ZX250K-6
+HITACHI ZX225US-6
+HITACHI ZX330-6
+HITACHI ZX200X-5B
+HITACHI ZX130-5B
+HITACHI ZX130-5G
+HITACHI ZX200-5G
+HITACHI ZX210LC-5B
+HITACHI ZX350LC-5B
+HITACHI ZX75US-7`
+  .split(/\r?\n/)
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const file = fs.readFileSync(targetPath, 'utf8');
+const block = file.match(/const modelOptions = \[([\s\S]*?)\];/)[1];
+const existing = [...block.matchAll(/\{ value: '((?:\\'|[^'])*)'/g)].map((m) =>
+  m[1].replace(/\\'/g, "'")
+);
+
+const merged = new Set(existing);
+const added = [];
+for (const model of additional) {
+  if (!merged.has(model)) {
+    merged.add(model);
+    added.push(model);
+  }
+}
+
+const sorted = [...merged].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+const esc = (s) => s.replace(/'/g, "\\'");
+const lines = sorted.map(
+  (v) => `    { value: '${esc(v)}', label: '${esc(v)}' },`
+);
+const newBlock = `const modelOptions = [\n${lines.join('\n')}\n  ];`;
+const newFile = file.replace(/const modelOptions = \[[\s\S]*?\];/, newBlock);
+fs.writeFileSync(targetPath, newFile);
+
+console.log(`Existing: ${existing.length}, Added: ${added.length}, Total: ${sorted.length}`);
+console.log('New models:');
+added.sort((a, b) => a.localeCompare(b)).forEach((m) => console.log(`  + ${m}`));
