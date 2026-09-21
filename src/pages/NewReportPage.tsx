@@ -87,13 +87,45 @@ export const NewReportPage: React.FC = () => {
   // Debug: Log machine types count - Force rebuild 2025-01-10
   console.log('🔍 Machine Types loaded:', machineTypes.length, machineTypeOptions.length);
 
-  // Convert component types to options (alphabetical)
-  const componentTypeOptions = componentTypes
-    .map(ct => ({
-      value: ct.name,
-      label: ct.name
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+  // Convert component types to options (alphabetical, no bilingual duplicates)
+  const componentTypeOptions = (() => {
+    const canonicalByKey = new Map<string, { value: string; label: string }>();
+    const preferredNames = new Set([
+      'Job Site / Sitio de trabajo',
+      'Operation / Operación',
+      'Appearance / Apariencia',
+      'General / General',
+      'Aftertreatment System / Sistema Postratamiento',
+      'Others / Otros',
+    ]);
+    const normalizeKey = (name: string) =>
+      name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .split('/')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .sort()
+        .join('|');
+
+    for (const ct of componentTypes) {
+      const key = normalizeKey(ct.name);
+      const existing = canonicalByKey.get(key);
+      if (!existing) {
+        canonicalByKey.set(key, { value: ct.name, label: ct.name });
+        continue;
+      }
+      // Prefer EN / ES canonical label when both variants exist
+      if (preferredNames.has(ct.name) && !preferredNames.has(existing.value)) {
+        canonicalByKey.set(key, { value: ct.name, label: ct.name });
+      }
+    }
+
+    return [...canonicalByKey.values()].sort((a, b) =>
+      a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
+    );
+  })();
 
   const draftStorageKey = authState.user
     ? `${DRAFT_STORAGE_PREFIX}${authState.user.id}`
