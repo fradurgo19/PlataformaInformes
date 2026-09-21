@@ -22,7 +22,7 @@ export const createReport = async (req: Request, res: Response) => {
     } catch (err) {
       throw new Error('Invalid JSON in reportData');
     }
-    const files = req.files as Express.Multer.File[];
+    const files = (req.files as Express.Multer.File[] | undefined) || [];
     
     // hourmeter is INTEGER in DB; coerce decimals (e.g. "64.7") to integer
     const hourmeter =
@@ -88,14 +88,18 @@ export const createReport = async (req: Request, res: Response) => {
             const uniqueFileName = `report_${report.id}_component_${componentId}_${timestamp}_${photo.originalname}`;
             
             // Subir a Supabase Storage y obtener info de la imagen comprimida
-            const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, uniqueFileName, photo.mimetype);
+            const { publicUrl, size, mimetype, storedFileName } = await uploadFileToSupabase(
+              photo.buffer,
+              uniqueFileName,
+              photo.mimetype
+            );
             await client.query(
               `INSERT INTO photos (
                 component_id, filename, original_name, file_path, file_size, mime_type, photo_name
               ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
               [
                 componentId,
-                uniqueFileName,
+                storedFileName || uniqueFileName,
                 photo.originalname,
                 publicUrl,
                 size,
@@ -420,7 +424,7 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
       return;
     }
     
-    const files = req.files as Express.Multer.File[];
+    const files = (req.files as Express.Multer.File[] | undefined) || [];
 
     // hourmeter is INTEGER in DB; coerce decimals to integer
     const hourmeter =
@@ -495,11 +499,23 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
         const uniqueFileName = `report_${reportId}_component_${componentId}_${timestamp}_${photo.originalname}`;
         
         // Subir a Supabase Storage y obtener info de la imagen comprimida
-        const { publicUrl, size, mimetype } = await uploadFileToSupabase(photo.buffer, uniqueFileName, photo.mimetype);
+        const { publicUrl, size, mimetype, storedFileName } = await uploadFileToSupabase(
+          photo.buffer,
+          uniqueFileName,
+          photo.mimetype
+        );
         await client.query(
           `INSERT INTO photos (component_id, filename, original_name, file_path, file_size, mime_type, photo_name)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [componentId, uniqueFileName, photo.originalname, publicUrl, size, mimetype, photo.originalname]
+          [
+            componentId,
+            storedFileName || uniqueFileName,
+            photo.originalname,
+            publicUrl,
+            size,
+            mimetype,
+            photo.originalname
+          ]
         );
       }
     }

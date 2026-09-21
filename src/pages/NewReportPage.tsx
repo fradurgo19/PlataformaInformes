@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreateReport, useReport, useUpdateReport } from '../hooks/useReports';
 import { useAuth } from '../context/AuthContext';
 import { useTypes } from '../context/TypesContext';
@@ -20,9 +21,14 @@ import {
 } from 'lucide-react';
 import { apiService } from '../services/api';
 
+const DRAFT_STORAGE_PREFIX = 'report-draft-';
+const MAX_PHOTOS_PER_COMPONENT = 20;
+const STEP_STORAGE_KEY = 'reportEditStep';
+
 export const NewReportPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const { state: authState } = useAuth();
   const { machineTypes, componentTypes } = useTypes();
   const createReportMutation = useCreateReport();
@@ -33,6 +39,8 @@ export const NewReportPage: React.FC = () => {
 
   const [initialized, setInitialized] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   
   const [reportData, setReportData] = useState({
     clientName: '',
@@ -79,11 +87,96 @@ export const NewReportPage: React.FC = () => {
   // Debug: Log machine types count - Force rebuild 2025-01-10
   console.log('🔍 Machine Types loaded:', machineTypes.length, machineTypeOptions.length);
 
-  // Convert component types to options
-  const componentTypeOptions = componentTypes.map(ct => ({
-    value: ct.name,
-    label: ct.name
-  }));
+  // Convert component types to options (alphabetical)
+  const componentTypeOptions = componentTypes
+    .map(ct => ({
+      value: ct.name,
+      label: ct.name
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+
+  const draftStorageKey = authState.user
+    ? `${DRAFT_STORAGE_PREFIX}${authState.user.id}`
+    : null;
+
+  const persistLocalDraft = useCallback(() => {
+    if (!draftStorageKey || isEditMode) return;
+    try {
+      const draft = {
+        reportData,
+        components: components.map((c) => ({
+          ...c,
+          // Files cannot be restored from localStorage; keep count for user notice
+          photos: c.photos.filter((p) => !(typeof File !== 'undefined' && p instanceof File)),
+          pendingNewPhotos: c.photos.filter((p) => typeof File !== 'undefined' && p instanceof File).length,
+        })),
+        suggestedParts,
+        currentStep,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+    } catch (err) {
+      console.warn('Could not persist local draft:', err);
+    }
+  }, [draftStorageKey, isEditMode, reportData, components, suggestedParts, currentStep]);
+
+  // Autosave text draft locally every 20s (survives app switch / tab discard)
+  useEffect(() => {
+    if (isEditMode || !draftStorageKey) return;
+    const timer = window.setInterval(() => persistLocalDraft(), 20000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') persistLocalDraft();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [isEditMode, draftStorageKey, persistLocalDraft]);
+
+  // Restore local draft for new reports (once)
+  useEffect(() => {
+    if (isEditMode || !draftStorageKey || draftLoaded) return;
+    try {
+      const raw = localStorage.getItem(draftStorageKey);
+      if (!raw) {
+        setDraftLoaded(true);
+        return;
+      }
+      const draft = JSON.parse(raw);
+      if (draft?.reportData) setReportData((prev) => ({ ...prev, ...draft.reportData }));
+      if (Array.isArray(draft?.components) && draft.components.length > 0) {
+        setComponents(draft.components);
+      }
+      if (Array.isArray(draft?.suggestedParts)) setSuggestedParts(draft.suggestedParts);
+      if (draft?.currentStep) setCurrentStep(Number(draft.currentStep) || 1);
+      const pending = (draft.components || []).reduce(
+        (n: number, c: { pendingNewPhotos?: number }) => n + (c.pendingNewPhotos || 0),
+        0
+      );
+      if (pending > 0) {
+        setSaveSuccess(
+          `Local draft restored. Re-attach ${pending} photo(s) that could not be recovered from the browser cache.`
+        );
+      } else if (draft?.reportData?.clientName) {
+        setSaveSuccess('Local draft restored. Use Save Progress to sync to the server.');
+      }
+    } catch (err) {
+      console.warn('Could not restore local draft:', err);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [isEditMode, draftStorageKey, draftLoaded]);
+  // Restore step after create → edit redirect
+  useEffect(() => {
+    if (!isEditMode) return;
+    const stepRaw = sessionStorage.getItem(STEP_STORAGE_KEY);
+    if (stepRaw) {
+      const step = Number.parseInt(stepRaw, 10);
+      if (step >= 1 && step <= 3) setCurrentStep(step);
+      sessionStorage.removeItem(STEP_STORAGE_KEY);
+    }
+  }, [isEditMode]);
 
   // Lista de modelos actualizada
   const modelOptions = [
@@ -955,8 +1048,8 @@ export const NewReportPage: React.FC = () => {
       return total + newPhotos;
     }, 0);
     
-    if (totalPhotos > 100) {
-      newErrors.photos = 'Too many photos. Maximum is 100 photos per report.';
+    if (totalPhotos > MAX_PHOTOS_PER_COMPONENT * Math.max(components.length, 1)) {
+      newErrors.photos = `Too many photos. Maximum is ${MAX_PHOTOS_PER_COMPONENT} photos per component.`;
     }
 
     // Step 3 validation
@@ -1096,98 +1189,153 @@ export const NewReportPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validateAllSteps()) {
-      // Find the first step with an error and go to it
-      if (errors.clientName || errors.machineType || errors.model || errors.serialNumber || errors.hourmeter || errors.ott) {
-        setCurrentStep(1);
-      } else if (errors.components || Object.keys(errors).some(k => k.startsWith('component_'))) {
-        setCurrentStep(2);
-      } else if (errors.conclusions || Object.keys(errors).some(k => k.startsWith('part_'))) {
-        setCurrentStep(3);
-      }
-      return;
+  const buildFormData = (): FormData => {
+    const reportJson = {
+      client_name: reportData.clientName,
+      machine_type: reportData.machineType,
+      model: reportData.model,
+      serial_number: reportData.serialNumber,
+      hourmeter: Number(reportData.hourmeter) || 0,
+      report_date: reportData.date,
+      ott: reportData.ott,
+      reason_of_service: reportData.reasonOfService,
+      conclusions: reportData.conclusions,
+      overall_suggestions: reportData.overallSuggestions,
+      status: isEditMode ? (reportResponse?.data?.status || 'draft') : 'draft',
+      components: components.map((c) => ({
+        id: c.id,
+        type: c.type,
+        findings: c.findings || '',
+        parameters: c.parameters,
+        status: c.status,
+        suggestions: c.suggestions,
+        priority: c.priority,
+        photos: c.photos
+          .map((p) => {
+            if (typeof File !== 'undefined' && p instanceof File) return null;
+            return typeof p === 'object' && 'url' in p ? p.url : null;
+          })
+          .filter((p) => p !== null),
+      })),
+      suggested_parts: suggestedParts.map((p) => ({
+        part_number: p.partNumber,
+        description: p.description,
+        quantity: Number(p.quantity) || 1,
+      })),
+    };
+
+    const formData = new FormData();
+    formData.append('reportData', JSON.stringify(reportJson));
+
+    components.forEach((component, componentIndex) => {
+      component.photos.forEach((photo) => {
+        if (typeof File !== 'undefined' && photo instanceof File) {
+          formData.append(`photos_${componentIndex}`, photo, photo.name);
+        }
+      });
+    });
+
+    return formData;
+  };
+
+  /** Progress save: only header fields required so user can continue later. */
+  const validateProgressSave = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!reportData.clientName) newErrors.clientName = 'Client name is required to save progress';
+    if (!reportData.machineType) newErrors.machineType = 'Machine type is required to save progress';
+    if (!reportData.model) newErrors.model = 'Model is required to save progress';
+    if (!reportData.serialNumber) newErrors.serialNumber = 'Serial number is required to save progress';
+    if (!reportData.hourmeter || Number.isNaN(Number(reportData.hourmeter))) {
+      newErrors.hourmeter = 'Hourmeter is required to save progress';
     }
+    if (!reportData.ott) newErrors.ott = 'OTT is required to save progress';
+    if (!reportData.date) newErrors.date = 'Report date is required to save progress';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      setCurrentStep(1);
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async (options: { finalize: boolean }) => {
+    const { finalize } = options;
+    setSaveSuccess(null);
+    setErrors({});
 
     if (!authState.user) {
       setErrors({ submit: 'User not authenticated' });
       return;
     }
 
-    try {
-      const reportJson = {
-        client_name: reportData.clientName,
-        machine_type: reportData.machineType,
-        model: reportData.model,
-        serial_number: reportData.serialNumber,
-        hourmeter: Number(reportData.hourmeter),
-        report_date: reportData.date,
-        ott: reportData.ott,
-        reason_of_service: reportData.reasonOfService,
-        conclusions: reportData.conclusions,
-        overall_suggestions: reportData.overallSuggestions,
-        status: isEditMode ? (reportResponse?.data?.status || 'draft') : 'draft',
-        components: components.map(c => ({
-          id: c.id,
-          type: c.type,
-          findings: c.findings,
-          parameters: c.parameters,
-          status: c.status,
-          suggestions: c.suggestions,
-          priority: c.priority,
-          photos: c.photos.map(p => {
-            if (p instanceof File) {
-              // Para nuevas fotos (File), enviar null para que el backend las procese
-              return null;
-            }
-            // Para fotos existentes, enviar la URL completa
-            return p.url;
-          }).filter(p => p !== null),
-        })),
-        suggested_parts: suggestedParts.map(p => ({
-          part_number: p.partNumber,
-          description: p.description,
-          quantity: Number(p.quantity) || 1
-        })),
-      };
-
-      if (!reportJson || typeof reportJson !== 'object') {
-        setErrors({ submit: 'Invalid report data. Please refresh and try again.' });
+    if (finalize) {
+      if (!validateAllSteps()) {
+        if (
+          !reportData.clientName ||
+          !reportData.machineType ||
+          !reportData.model ||
+          !reportData.serialNumber ||
+          !reportData.hourmeter ||
+          !reportData.ott ||
+          !reportData.reasonOfService
+        ) {
+          setCurrentStep(1);
+        } else if (components.length === 0 || components.some((c) => !c.findings)) {
+          setCurrentStep(2);
+        } else {
+          setCurrentStep(3);
+        }
         return;
       }
+    } else if (!validateProgressSave()) {
+      return;
+    }
 
-      const formData = new FormData();
-      formData.append('reportData', JSON.stringify(reportJson));
-
-      // Add photos to form data
-      components.forEach((component, componentIndex) => {
-        component.photos.forEach((photo) => {
-          if (photo instanceof File) {
-            formData.append(`photos_${componentIndex}`, photo);
-          }
-        });
-      });
+    try {
+      const formData = buildFormData();
 
       if (isEditMode && id) {
         await updateReportMutation.mutateAsync({ id, updates: formData });
+        setInitialized(false);
+        await queryClient.invalidateQueries({ queryKey: ['report', id] });
+        if (finalize) {
+          if (draftStorageKey) localStorage.removeItem(draftStorageKey);
+          navigate('/reports');
+        } else {
+          setSaveSuccess('Progress saved. You can keep editing or leave and come back later.');
+          persistLocalDraft();
+        }
       } else {
-        await createReportMutation.mutateAsync(formData);
+        const created = await createReportMutation.mutateAsync(formData);
+        const newId = created?.data?.id;
+        if (draftStorageKey) localStorage.removeItem(draftStorageKey);
+        if (!newId) {
+          setErrors({ submit: 'Report saved but id was not returned. Open it from the reports list.' });
+          navigate('/reports');
+          return;
+        }
+        if (finalize) {
+          navigate('/reports');
+        } else {
+          sessionStorage.setItem(STEP_STORAGE_KEY, String(currentStep));
+          setSaveSuccess('Progress saved. Continuing in edit mode…');
+          navigate(`/reports/${newId}/edit`, { replace: true });
+        }
       }
-
-      navigate('/reports');
     } catch (error) {
       console.error('Error saving report:', error);
-      
-      // Handle specific error messages
+
       if (error instanceof Error) {
         if (error.message.includes('not authorized') || error.message.includes('not found')) {
           setErrors({ submit: 'You are not authorized to edit this report or the report was not found.' });
         } else if (error.message.includes('CLOSED')) {
           setErrors({ submit: 'This report is closed and cannot be edited.' });
         } else if (error.message.includes('Request too large') || error.message.includes('413')) {
-          setErrors({ submit: 'The request is too large. Please reduce the number of photos or their size. Maximum is 100 photos per report.' });
+          setErrors({
+            submit: `The request is too large. Please reduce photos. Maximum ${MAX_PHOTOS_PER_COMPONENT} photos per component.`,
+          });
         } else if (error.message.includes('Too many files')) {
-          setErrors({ submit: 'Too many photos. Maximum is 100 photos per report.' });
+          setErrors({ submit: 'Too many photos. Please reduce the number of photos.' });
         } else if (error.message.includes('File too large')) {
           setErrors({ submit: 'One or more photos are too large. Maximum size is 30MB per photo.' });
         } else if (error.message.includes('Failed to parse response')) {
@@ -1199,6 +1347,14 @@ export const NewReportPage: React.FC = () => {
         setErrors({ submit: 'Error saving report. Please try again.' });
       }
     }
+  };
+
+  const handleSubmit = async () => {
+    await handleSave({ finalize: true });
+  };
+
+  const handleSaveProgress = async () => {
+    await handleSave({ finalize: false });
   };
 
   if (isLoadingReport) {
@@ -1481,7 +1637,7 @@ export const NewReportPage: React.FC = () => {
                     <p className="font-medium mb-1">Photo Upload Guidelines:</p>
                     <ul className="text-xs space-y-1">
                       <li>• Maximum 30MB per photo</li>
-                      <li>• Maximum 100 photos per report</li>
+                      <li>• Maximum {MAX_PHOTOS_PER_COMPONENT} photos per component section</li>
                       <li>• Supported formats: JPEG, PNG, GIF, WebP</li>
                       <li>• Photos will be automatically compressed and resized to 800px max</li>
                     </ul>
@@ -1495,6 +1651,7 @@ export const NewReportPage: React.FC = () => {
                 onPhotosChange={(photos) => updateComponent(index, 'photos', photos)}
                 onDeleteExistingPhoto={deleteExistingPhoto}
                 onPhotoNameChange={updatePhotoName}
+                maxPhotos={MAX_PHOTOS_PER_COMPONENT}
               />
             </div>
           </div>
@@ -1616,6 +1773,12 @@ export const NewReportPage: React.FC = () => {
           </div>
         )}
 
+        {saveSuccess && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-green-800 text-sm">{saveSuccess}</p>
+          </div>
+        )}
+
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -1651,7 +1814,7 @@ export const NewReportPage: React.FC = () => {
         {renderStepContent()}
 
         {/* Navigation */}
-        <div className="flex justify-between mt-8">
+        <div className="flex flex-wrap justify-between gap-3 mt-8">
           <Button
             variant="outline"
             onClick={handlePrevious}
@@ -1661,7 +1824,22 @@ export const NewReportPage: React.FC = () => {
             Previous
           </Button>
 
-          <div className="flex space-x-4">
+          <div className="flex flex-wrap gap-3 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveProgress}
+              disabled={createReportMutation.isPending || updateReportMutation.isPending}
+              title="Save progress and keep editing"
+            >
+              {createReportMutation.isPending || updateReportMutation.isPending ? (
+                <LoadingSpinner />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Progress
+            </Button>
+
             {currentStep < 3 ? (
               <Button onClick={handleNext}>
                 Next
@@ -1677,7 +1855,7 @@ export const NewReportPage: React.FC = () => {
                 ) : (
                   <Save className="w-4 h-4 mr-2" />
                 )}
-                {isEditMode ? 'Update Report' : 'Save Report'}
+                {isEditMode ? 'Finish & Exit' : 'Save & Finish'}
               </Button>
             )}
           </div>

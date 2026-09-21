@@ -1,21 +1,39 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../atoms/Button';
 import { Camera, X, Upload, Trash2, Edit3 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
+type ExistingPhoto = { id: string; url: string; filename: string; photo_name?: string };
+type PhotoItem = File | ExistingPhoto;
+
 interface PhotoUploadProps {
-  photos: Array<File | { id: string; url: string; filename: string; photo_name?: string }>;
-  onPhotosChange: (photos: Array<File | { id: string; url: string; filename: string; photo_name?: string }>) => void;
+  photos: PhotoItem[];
+  onPhotosChange: (photos: PhotoItem[]) => void;
   maxPhotos?: number;
   label?: string;
   onDeleteExistingPhoto?: (photoId: string) => Promise<void>;
   onPhotoNameChange?: (photoId: string, newName: string) => Promise<void>;
 }
 
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i;
+const UNSUPPORTED_SAVE_EXT = /\.(heic|heif)$/i;
+
+const isFilePhoto = (photo: PhotoItem): photo is File =>
+  typeof File !== 'undefined' && photo instanceof File;
+
+const isExistingPhoto = (photo: PhotoItem): photo is ExistingPhoto =>
+  !isFilePhoto(photo) && typeof photo === 'object' && photo !== null && 'id' in photo;
+
+const isAcceptableImageFile = (file: File): boolean => {
+  if (file.type.startsWith('image/')) return true;
+  // Some mobile browsers send empty MIME; fall back to extension.
+  return !file.type && IMAGE_EXT.test(file.name);
+};
+
 export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   photos,
   onPhotosChange,
-  maxPhotos = 10,
+  maxPhotos = 20,
   label = 'Photos',
   onDeleteExistingPhoto,
   onPhotoNameChange,
@@ -24,16 +42,66 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState<string>('');
+  const [editingName, setEditingName] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Stable preview URLs for File objects; revoke only on unmount / photo removal.
+  const filePreviewUrls = useMemo(() => {
+    const map = new Map<number, string>();
+    photos.forEach((photo, index) => {
+      if (isFilePhoto(photo)) {
+        map.set(index, URL.createObjectURL(photo));
+      }
+    });
+    return map;
+  }, [photos]);
+
+  useEffect(() => {
+    return () => {
+      filePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [filePreviewUrls]);
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
-    const newFiles = Array.from(files);
+    setLocalError(null);
+
     const remainingSlots = maxPhotos - photos.length;
-    const filesToProcess = newFiles.slice(0, remainingSlots);
-    const imageFiles = filesToProcess.filter(file => file.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      onPhotosChange([...photos, ...imageFiles]);
+    if (remainingSlots <= 0) {
+      setLocalError(`Maximum of ${maxPhotos} photos reached for this component.`);
+      return;
+    }
+
+    const selected = Array.from(files);
+    const imageFiles = selected.filter(isAcceptableImageFile);
+    const rejectedCount = selected.length - imageFiles.length;
+    const heicCount = imageFiles.filter((f) =>
+      f.type.includes('heic') || f.type.includes('heif') || UNSUPPORTED_SAVE_EXT.test(f.name)
+    ).length;
+
+    const filesToAdd = imageFiles.slice(0, remainingSlots);
+    if (filesToAdd.length > 0) {
+      onPhotosChange([...photos, ...filesToAdd]);
+    }
+
+    const messages: string[] = [];
+    if (rejectedCount > 0) {
+      messages.push(`${rejectedCount} file(s) were skipped (not a supported image).`);
+    }
+    if (imageFiles.length > remainingSlots) {
+      messages.push(`Only ${remainingSlots} more photo(s) can be added (limit ${maxPhotos}).`);
+    }
+    if (heicCount > 0) {
+      messages.push(
+        'HEIC/HEIF photos from iPhone may fail on save. Prefer JPEG or PNG, or convert before uploading.'
+      );
+    }
+    if (messages.length > 0) {
+      setLocalError(messages.join(' '));
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -45,29 +113,26 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
   const removePhoto = async (index: number) => {
     const photo = photos[index];
-    
-    // Si es una foto existente (tiene id), llamar a la API para eliminarla
-    if (typeof photo === 'object' && 'id' in photo && onDeleteExistingPhoto) {
+    setLocalError(null);
+
+    if (isExistingPhoto(photo) && onDeleteExistingPhoto) {
       try {
         setDeletingPhotoId(photo.id);
         await onDeleteExistingPhoto(photo.id);
-        // La foto se eliminará del servidor, pero mantenemos la UI actualizada
-        const newPhotos = photos.filter((_, i) => i !== index);
-        onPhotosChange(newPhotos);
+        onPhotosChange(photos.filter((_, i) => i !== index));
       } catch (error) {
         console.error('Error deleting photo:', error);
-        // Si falla la eliminación, no actualizamos la UI
+        setLocalError('Could not delete the existing photo. Please try again.');
       } finally {
         setDeletingPhotoId(null);
       }
-    } else {
-      // Si es una nueva foto (File), solo la removemos de la UI
-      const newPhotos = photos.filter((_, i) => i !== index);
-      onPhotosChange(newPhotos);
+      return;
     }
+
+    onPhotosChange(photos.filter((_, i) => i !== index));
   };
 
-  const startEditingName = (photo: { id: string; url: string; filename: string; photo_name?: string }) => {
+  const startEditingName = (photo: ExistingPhoto) => {
     setEditingPhotoId(photo.id);
     setEditingName(photo.photo_name || photo.filename);
   };
@@ -76,15 +141,16 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     if (onPhotoNameChange) {
       try {
         await onPhotoNameChange(photoId, editingName);
-        // Actualizar la UI local
-        const newPhotos = photos.map(photo => 
-          typeof photo === 'object' && 'id' in photo && photo.id === photoId
-            ? { ...photo, photo_name: editingName }
-            : photo
+        onPhotosChange(
+          photos.map((photo) =>
+            isExistingPhoto(photo) && photo.id === photoId
+              ? { ...photo, photo_name: editingName }
+              : photo
+          )
         );
-        onPhotosChange(newPhotos);
       } catch (error) {
         console.error('Error updating photo name:', error);
+        setLocalError('Could not update the photo name.');
       }
     }
     setEditingPhotoId(null);
@@ -96,25 +162,15 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     setEditingName('');
   };
 
-  const openFileDialog = () => {
-    fileInputRef.current?.click();
-  };
-
-  const isExistingPhoto = (photo: File | { id: string; url: string; filename: string; photo_name?: string }): boolean => {
-    return typeof photo === 'object' && 'id' in photo;
-  };
-
-  const getPhotoSrc = (photo: File | { id: string; url: string; filename: string; photo_name?: string }): string => {
-    if (photo instanceof File) {
-      return URL.createObjectURL(photo);
+  const getPhotoSrc = (photo: PhotoItem, index: number): string => {
+    if (isFilePhoto(photo)) {
+      return filePreviewUrls.get(index) || '';
     }
     return photo.url;
   };
 
-  const getPhotoName = (photo: File | { id: string; url: string; filename: string; photo_name?: string }): string => {
-    if (photo instanceof File) {
-      return photo.name;
-    }
+  const getPhotoName = (photo: PhotoItem): string => {
+    if (isFilePhoto(photo)) return photo.name;
     return photo.photo_name || photo.filename;
   };
 
@@ -122,19 +178,18 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     <div className="space-y-3">
       <label className="block text-sm font-medium text-slate-700">
         {label}
-        <span className="text-slate-400 ml-1">({photos.length}/{maxPhotos})</span>
+        <span className="text-slate-400 ml-1">
+          ({photos.length}/{maxPhotos})
+        </span>
         {photos.length >= maxPhotos && (
           <span className="text-orange-600 ml-2 text-xs">Maximum photos reached</span>
         )}
       </label>
 
-      {/* Upload Area */}
       <div
         className={cn(
           'border-2 border-dashed rounded-lg p-6 text-center transition-colors',
-          isDragging
-            ? 'border-blue-400 bg-blue-50'
-            : 'border-slate-300 hover:border-slate-400',
+          isDragging ? 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:border-slate-400',
           photos.length >= maxPhotos && 'opacity-50 pointer-events-none'
         )}
         onDragOver={(e) => {
@@ -152,7 +207,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
           type="button"
           variant="outline"
           size="sm"
-          onClick={openFileDialog}
+          onClick={() => fileInputRef.current?.click()}
           disabled={photos.length >= maxPhotos}
         >
           <Camera className="w-4 h-4 mr-2" />
@@ -164,36 +219,42 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*"
+        accept="image/jpeg,image/png,image/gif,image/webp,image/*"
         className="hidden"
         onChange={(e) => handleFileSelect(e.target.files)}
       />
 
-      {/* Photo Preview Grid */}
+      {localError && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          {localError}
+        </p>
+      )}
+
       {photos.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {photos.map((photo, index) => {
-            const src = getPhotoSrc(photo);
-            const isExisting = isExistingPhoto(photo);
-            const isDeleting = isExisting && deletingPhotoId === (photo as any).id;
-            const isEditing = isExisting && editingPhotoId === (photo as any).id;
-            
+            const src = getPhotoSrc(photo, index);
+            const existing = isExistingPhoto(photo);
+            const isDeleting = existing && deletingPhotoId === photo.id;
+            const isEditing = existing && editingPhotoId === photo.id;
+            const key = existing ? photo.id : `new-${index}-${isFilePhoto(photo) ? photo.name : index}`;
+
             return (
-              <div key={index} className="relative group w-32 h-24">
-                <img
-                  src={src}
-                  alt={`Photo ${index + 1}`}
-                  className={cn(
-                    "w-full h-full object-cover rounded-lg border border-slate-200",
-                    isDeleting && "opacity-50",
-                    isEditing && "border-blue-500"
-                  )}
-                  onLoad={() => {
-                    if (photo instanceof File) URL.revokeObjectURL(src);
-                  }}
-                />
-                {/* Badge para fotos existentes */}
-                {isExisting && (
+              <div key={key} className="relative group w-32 h-24">
+                {src ? (
+                  <img
+                    src={src}
+                    alt={`Photo ${index + 1}`}
+                    className={cn(
+                      'w-full h-full object-cover rounded-lg border border-slate-200',
+                      isDeleting && 'opacity-50',
+                      isEditing && 'border-blue-500'
+                    )}
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-lg border border-slate-200 bg-slate-100" />
+                )}
+                {existing && (
                   <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
                     Existing
                   </div>
@@ -206,38 +267,32 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                 <button
                   type="button"
                   onClick={() => removePhoto(index)}
-                  disabled={isDeleting}
+                  disabled={!!isDeleting}
                   className={cn(
-                    "absolute -top-2 -right-2 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity",
-                    isExisting 
-                      ? "bg-orange-500 hover:bg-orange-600" 
-                      : "bg-red-500 hover:bg-red-600",
-                    isDeleting && "opacity-50 cursor-not-allowed"
+                    'absolute -top-2 -right-2 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity',
+                    existing ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-500 hover:bg-red-600',
+                    isDeleting && 'opacity-50 cursor-not-allowed'
                   )}
-                  title={isExisting ? "Remove existing photo" : "Remove new photo"}
+                  title={existing ? 'Remove existing photo' : 'Remove new photo'}
                 >
                   {isDeleting ? (
                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : isExisting ? (
+                  ) : existing ? (
                     <Trash2 className="w-3 h-3" />
                   ) : (
                     <X className="w-3 h-3" />
                   )}
                 </button>
-                {/* Photo Name Display/Edit */}
                 <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-90 p-1 rounded-b-lg">
-                  {isEditing ? (
+                  {isEditing && existing ? (
                     <input
                       type="text"
                       value={editingName}
                       onChange={(e) => setEditingName(e.target.value)}
-                      onBlur={() => savePhotoName((photo as any).id)}
+                      onBlur={() => savePhotoName(photo.id)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          savePhotoName((photo as any).id);
-                        } else if (e.key === 'Escape') {
-                          cancelEditing();
-                        }
+                        if (e.key === 'Enter') savePhotoName(photo.id);
+                        else if (e.key === 'Escape') cancelEditing();
                       }}
                       className="w-full text-xs text-slate-700 border border-slate-300 rounded-sm px-1 py-0.5 focus:outline-none focus:border-blue-500"
                       placeholder="Enter photo name..."
@@ -247,10 +302,10 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                       <span className="text-xs text-slate-700 truncate px-1">
                         {getPhotoName(photo)}
                       </span>
-                      {isExisting && (
+                      {existing && (
                         <button
                           type="button"
-                          onClick={() => startEditingName(photo as any)}
+                          onClick={() => startEditingName(photo)}
                           className="text-blue-500 hover:text-blue-700 p-1"
                           title="Edit photo name"
                         >

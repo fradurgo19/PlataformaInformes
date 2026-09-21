@@ -1,59 +1,60 @@
 import { Request, Response, NextFunction } from 'express';
 
-// Tipos de archivo permitidos
+// Tipos de archivo permitidos (producción / móviles)
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
   'image/png',
   'image/gif',
   'image/webp',
-  'image/svg+xml'
+  'image/svg+xml',
+  'image/heic',
+  'image/heif',
 ];
 
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.heic', '.heif'];
+
 // Tamaño máximo de archivo (30MB)
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '31457280');
+const MAX_FILE_SIZE = Number.parseInt(process.env.MAX_FILE_SIZE || '31457280', 10);
 
 export const validateFileUpload = (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!req.files || Object.keys(req.files).length === 0) {
-      return next(); // No hay archivos, continuar
+    if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+      return next();
     }
 
     const files = req.files as Express.Multer.File[];
-    
+
     for (const file of files) {
-      // Validar tipo MIME
-      if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      const fileName = file.originalname || 'unnamed';
+      const lowerName = fileName.toLowerCase();
+      const fileExtension = lowerName.includes('.')
+        ? lowerName.substring(lowerName.lastIndexOf('.'))
+        : '';
+
+      const mimeOk = ALLOWED_MIME_TYPES.includes(file.mimetype);
+      const extOk = ALLOWED_EXTENSIONS.includes(fileExtension);
+
+      // Accept if MIME or extension is a known image (mobile browsers sometimes omit MIME)
+      if (!mimeOk && !extOk) {
         return res.status(400).json({
           success: false,
-          error: `File type not allowed: ${file.originalname}. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`
+          error: `File type not allowed: ${fileName}. Use JPEG, PNG, GIF or WebP.`
         });
       }
 
-      // Validar tamaño
       if (file.size > MAX_FILE_SIZE) {
         return res.status(400).json({
           success: false,
-          error: `File too large: ${file.originalname}. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
+          error: `File too large: ${fileName}. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
         });
       }
 
-      // Validar nombre de archivo (prevenir path traversal)
-      const fileName = file.originalname;
+      // Path traversal only (spaces and unicode names are OK)
       if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
         return res.status(400).json({
           success: false,
           error: 'Invalid filename'
-        });
-      }
-
-      // Validar extensión
-      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
-      const fileExtension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
-      if (!allowedExtensions.includes(fileExtension)) {
-        return res.status(400).json({
-          success: false,
-          error: `File extension not allowed: ${fileExtension}. Allowed extensions: ${allowedExtensions.join(', ')}`
         });
       }
     }
@@ -69,7 +70,6 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
 };
 
 export const sanitizeFileName = (fileName: string): string => {
-  // Remover caracteres peligrosos
   return fileName
     .replace(/[^a-zA-Z0-9.-]/g, '_')
     .replace(/_{2,}/g, '_')

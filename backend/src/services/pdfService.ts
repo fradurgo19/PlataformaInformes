@@ -27,48 +27,98 @@ export class PDFService {
     }
   }
 
-  private static async generateHTML(report: Report, components: Component[], photos: Photo[], suggestedParts: SuggestedPart[]): Promise<string> {
-    const logoBase64 = await this.getLogoBase64();
-    const componentsHTMLPromises = components.map(async (component) => {
-      const componentPhotos = photos.filter(photo => photo.component_id === component.id);
-      
-      const photosHTMLPromises = componentPhotos.map(async (photo) => {
-        let imageBase64 = '';
-        let mimeType = photo.mime_type || 'image/jpeg';
+  /** Normalize component type for matching (bilingual labels). */
+  private static normalizeTypeKey(type: unknown): string {
+    return String(type || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .split('/')[0]
+      .trim();
+  }
 
-        try {
-          if (photo.file_path.startsWith('http')) {
-            // Descargar la imagen desde Supabase Storage
-            const response = await axios.get(photo.file_path, { responseType: 'arraybuffer' });
-            imageBase64 = Buffer.from(response.data, 'binary').toString('base64');
-          } else {
-            // Leer desde disco (compatibilidad)
-            const imagePath = path.join(__dirname, '..', '..', photo.file_path);
-            const imageBuffer = await fs.promises.readFile(imagePath);
-            imageBase64 = imageBuffer.toString('base64');
-          }
-          
-          // Mostrar nombre de la foto si existe
-          const photoName = photo.photo_name || photo.original_name || 'Photo';
-          return `
-            <div style="text-align: center; margin-bottom: 10px;">
-              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="max-width: 100%; max-height: 200px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto;">
-              <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
-            </div>`;
-        } catch (error) {
-          console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
-          return `<div class="photo-item" style="border: 1px dashed #ccc; text-align: center; padding: 10px; display: flex; align-items: center; justify-content: center;">Image not found</div>`;
-        }
+  /** Job Site, Operation, Appearance, General → Información general 2 */
+  private static isGeneralInfoComponent(type: unknown): boolean {
+    const key = this.normalizeTypeKey(type);
+    if (key === 'general') return true;
+    if (key.includes('job site') || key.includes('sitio de trabajo')) return true;
+    if (key === 'operation' || key.includes('operacion')) return true;
+    if (key.includes('appearance') || key.includes('apariencia')) return true;
+    return false;
+  }
+
+  private static generalInfoOrder(type: unknown): number {
+    const key = this.normalizeTypeKey(type);
+    if (key.includes('job site') || key.includes('sitio de trabajo')) return 0;
+    if (key === 'operation' || key.includes('operacion')) return 1;
+    if (key.includes('appearance') || key.includes('apariencia')) return 2;
+    if (key === 'general') return 3;
+    return 99;
+  }
+
+  private static splitComponentsForPdf(components: Component[]): {
+    generalInfo: Component[];
+    assessment: Component[];
+  } {
+    const generalInfo = components
+      .filter((c) => this.isGeneralInfoComponent(c.type))
+      .sort((a, b) => {
+        const orderDiff = this.generalInfoOrder(a.type) - this.generalInfoOrder(b.type);
+        if (orderDiff !== 0) return orderDiff;
+        return String(a.type).localeCompare(String(b.type), 'es', { sensitivity: 'base' });
       });
 
-      const photosHTMLArray = await Promise.all(photosHTMLPromises);
-      const photosHTML = photosHTMLArray.join('');
+    const assessment = components
+      .filter((c) => !this.isGeneralInfoComponent(c.type))
+      .sort((a, b) =>
+        String(a.type).localeCompare(String(b.type), 'es', { sensitivity: 'base' })
+      );
 
-      return `
+    return { generalInfo, assessment };
+  }
+
+  private static async renderComponentCard(
+    component: Component,
+    photos: Photo[],
+    maxPhotoHeightPx: number
+  ): Promise<string> {
+    const componentPhotos = photos.filter((photo) => photo.component_id === component.id);
+
+    const photosHTMLPromises = componentPhotos.map(async (photo) => {
+      let imageBase64 = '';
+      const mimeType = photo.mime_type || 'image/jpeg';
+
+      try {
+        if (photo.file_path.startsWith('http')) {
+          const response = await axios.get(photo.file_path, { responseType: 'arraybuffer' });
+          imageBase64 = Buffer.from(response.data, 'binary').toString('base64');
+        } else {
+          const imagePath = path.join(__dirname, '..', '..', photo.file_path);
+          const imageBuffer = await fs.promises.readFile(imagePath);
+          imageBase64 = imageBuffer.toString('base64');
+        }
+
+        const photoName = photo.photo_name || photo.original_name || 'Photo';
+        return `
+            <div style="text-align: center; margin-bottom: 10px;">
+              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="max-width: 100%; max-height: ${maxPhotoHeightPx}px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto;">
+              <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
+            </div>`;
+      } catch (error) {
+        console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
+        return `<div class="photo-item" style="border: 1px dashed #ccc; text-align: center; padding: 10px; display: flex; align-items: center; justify-content: center;">Image not found</div>`;
+      }
+    });
+
+    const photosHTML = (await Promise.all(photosHTMLPromises)).join('');
+
+    return `
         <div style="margin: 12px 0; padding: 8px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
           <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
           <p><strong>Hallazgos / Findings:</strong> ${this.processTextWithLineBreaks(component.findings)}</p>
-          ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
+          ${
+            component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0
+              ? `
   <div style="margin: 10px 0;">
     <strong>Parámetros / Parameters:</strong>
     <table style="width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px;">
@@ -83,7 +133,9 @@ export class PDFService {
         </tr>
       </thead>
       <tbody>
-        ${component.parameters.map((param: any) => `
+        ${component.parameters
+          .map(
+            (param: any) => `
           <tr>
             <td style="border: 1px solid #ccc; padding: 4px;">${param.name ?? ''}</td>
             <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">${param.minValue ?? ''}</td>
@@ -92,22 +144,60 @@ export class PDFService {
             <td style="border: 1px solid #ccc; padding: 4px; text-align: center;">${param.corrected ? 'Sí / Yes' : 'No'}</td>
             <td style="border: 1px solid #ccc; padding: 4px;">${param.observation ?? ''}</td>
           </tr>
-        `).join('')}
+        `
+          )
+          .join('')}
       </tbody>
     </table>
   </div>
-` : ''}
-          <p><strong>Estado / Status:</strong> <span style="color: ${component.status === 'CORRECTED' ? 'green' : 'orange'}; font-weight: bold;">${component.status}</span></p>
-          <p><strong>Prioridad / Priority:</strong> <span style="color: ${component.priority === 'HIGH' ? 'red' : component.priority === 'MEDIUM' ? 'orange' : 'green'}; font-weight: bold;">${component.priority}</span></p>
+`
+              : ''
+          }
           ${component.suggestions ? `<p><strong>Sugerencias / Suggestions:</strong> ${this.processTextWithLineBreaks(component.suggestions)}</p>` : ''}
           ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos / Photos:</strong><div class="photos-container">${photosHTML}</div></div>` : ''}
         </div>
       `;
-    });
+  }
 
-    const componentsHTMLArray = await Promise.all(componentsHTMLPromises);
-    const componentsHTML = componentsHTMLArray.join('');
+  private static async renderComponentSections(
+    components: Component[],
+    photos: Photo[],
+    maxPhotoHeightPx: number
+  ): Promise<{ generalInfo2HTML: string; assessmentHTML: string }> {
+    const { generalInfo, assessment } = this.splitComponentsForPdf(components);
 
+    const generalCards = await Promise.all(
+      generalInfo.map((c) => this.renderComponentCard(c, photos, maxPhotoHeightPx))
+    );
+    const assessmentCards = await Promise.all(
+      assessment.map((c) => this.renderComponentCard(c, photos, maxPhotoHeightPx))
+    );
+
+    const generalInfo2HTML =
+      generalCards.length > 0
+        ? `
+        <div class="section">
+          <h2>📋 Información General 2 / General Information 2</h2>
+          ${generalCards.join('')}
+        </div>`
+        : '';
+
+    const assessmentHTML = `
+        <div class="section">
+          <h2>🔧 Evaluación de Componentes / Component Assessment</h2>
+          ${assessmentCards.length > 0 ? assessmentCards.join('') : '<p>No hay componentes evaluados / No components assessed</p>'}
+        </div>`;
+
+    return { generalInfo2HTML, assessmentHTML };
+  }
+
+  private static async generateHTML(report: Report, components: Component[], photos: Photo[], suggestedParts: SuggestedPart[]): Promise<string> {
+    const logoBase64 = await this.getLogoBase64();
+    const { generalInfo2HTML, assessmentHTML } = await this.renderComponentSections(
+      components,
+      photos,
+      200
+    );
     const suggestedPartsHTML = suggestedParts.length > 0 ? `
       <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
         <thead>
@@ -194,10 +284,9 @@ export class PDFService {
           </div>
         </div>
 
-        <div class="section">
-          <h2>🔧 Evaluación de Componentes / Component Assessment</h2>
-          ${componentsHTML}
-        </div>
+        ${generalInfo2HTML}
+
+        ${assessmentHTML}
 
         ${suggestedParts.length > 0 ? `
         <div class="section">
@@ -231,84 +320,11 @@ export class PDFService {
   }
 
   private static async generateHTMLWithoutLogo(report: Report, components: Component[], photos: Photo[], suggestedParts: SuggestedPart[]): Promise<string> {
-    const componentsHTMLPromises = components.map(async (component) => {
-      const componentPhotos = photos.filter(photo => photo.component_id === component.id);
-      
-      const photosHTMLPromises = componentPhotos.map(async (photo) => {
-        let imageBase64 = '';
-        let mimeType = photo.mime_type || 'image/jpeg';
-
-        try {
-          if (photo.file_path.startsWith('http')) {
-            // Descargar la imagen desde Supabase Storage
-            const response = await axios.get(photo.file_path, { responseType: 'arraybuffer' });
-            imageBase64 = Buffer.from(response.data, 'binary').toString('base64');
-          } else {
-            // Leer desde disco (compatibilidad)
-            const imagePath = path.join(__dirname, '..', '..', photo.file_path);
-            const imageBuffer = await fs.promises.readFile(imagePath);
-            imageBase64 = imageBuffer.toString('base64');
-          }
-          // Mostrar nombre de la foto si existe
-          const photoName = photo.photo_name || photo.original_name || 'Photo';
-          return `
-            <div style="text-align: center; margin-bottom: 10px;">
-              <img src="data:${mimeType};base64,${imageBase64}" alt="${photoName}" class="photo-item" style="max-width: 100%; max-height: 150px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto;">
-              <div style="font-size: 11px; color: #666; margin-top: 5px; text-align: center;">${photoName}</div>
-            </div>`;
-        } catch (error) {
-          console.error(`Error reading image file for PDF: ${photo.file_path}`, error);
-          return `<div class="photo-item" style="border: 1px dashed #ccc; text-align: center; padding: 10px; display: flex; align-items: center; justify-content: center;">Image not found</div>`;
-        }
-      });
-
-      const photosHTMLArray = await Promise.all(photosHTMLPromises);
-      const photosHTML = photosHTMLArray.join('');
-
-      return `
-        <div style="margin: 12px 0; padding: 8px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
-          <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
-          <p><strong>Hallazgos / Findings:</strong> ${this.processTextWithLineBreaks(component.findings)}</p>
-          ${component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0 ? `
-  <div style="margin: 10px 0;">
-    <strong>Parámetros / Parameters:</strong>
-    <table style="width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px;">
-      <thead>
-        <tr style="background: #f1f5f9;">
-          <th style="border: 1px solid #ccc; padding: 4px;">Nombre / Name</th>
-          <th style="border: 1px solid #ccc; padding: 4px;">Valor Mín / Min Value</th>
-          <th style="border: 1px solid #ccc; padding: 4px;">Valor Máx / Max Value</th>
-          <th style="border: 1px solid #ccc; padding: 4px;">Valor Medido / Measured Value</th>
-          <th style="border: 1px solid #ccc; padding: 4px;">Corregido / Corrected</th>
-          <th style="border: 1px solid #ccc; padding: 4px;">Observación / Observation</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${component.parameters.map((param: any) => `
-          <tr>
-            <td style="border: 1px solid #ccc; padding: 4px;">${param.name ?? ''}</td>
-            <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">${param.minValue ?? ''}</td>
-            <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">${param.maxValue ?? ''}</td>
-            <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">${param.measuredValue ?? ''}</td>
-            <td style="border: 1px solid #ccc; padding: 4px; text-align: center;">${param.corrected ? 'Sí / Yes' : 'No'}</td>
-            <td style="border: 1px solid #ccc; padding: 4px;">${param.observation ?? ''}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  </div>
-` : ''}
-          <p><strong>Estado / Status:</strong> <span style="color: ${component.status === 'CORRECTED' ? 'green' : 'orange'}; font-weight: bold;">${component.status}</span></p>
-          <p><strong>Prioridad / Priority:</strong> <span style="color: ${component.priority === 'HIGH' ? 'red' : component.priority === 'MEDIUM' ? 'orange' : 'green'}; font-weight: bold;">${component.priority}</span></p>
-          ${component.suggestions ? `<p><strong>Sugerencias / Suggestions:</strong> ${this.processTextWithLineBreaks(component.suggestions)}</p>` : ''}
-          ${photosHTML ? `<div style="margin-top: 10px;"><strong>Fotos / Photos:</strong><div class="photos-container">${photosHTML}</div></div>` : ''}
-        </div>
-      `;
-    });
-
-    const componentsHTMLArray = await Promise.all(componentsHTMLPromises);
-    const componentsHTML = componentsHTMLArray.join('');
-
+    const { generalInfo2HTML, assessmentHTML } = await this.renderComponentSections(
+      components,
+      photos,
+      150
+    );
     const suggestedPartsHTML = suggestedParts.length > 0 ? `
       <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
         <thead>
@@ -390,10 +406,9 @@ export class PDFService {
           </div>
         </div>
 
-        <div class="section">
-          <h2>🔧 Evaluación de Componentes / Component Assessment</h2>
-          ${componentsHTML}
-        </div>
+        ${generalInfo2HTML}
+
+        ${assessmentHTML}
 
         ${suggestedParts.length > 0 ? `
         <div class="section">

@@ -64,6 +64,12 @@ async function seedData() {
       { name: 'Transmission', description: 'Transmission system' },
       { name: 'Travel', description: 'Travel/propulsion system' },
       { name: 'Undercarriage', description: 'Undercarriage assembly' },
+      { name: 'Job Site / Sitio de trabajo', description: 'Job site conditions' },
+      { name: 'Operation / Operación', description: 'Operation conditions' },
+      { name: 'Appearance / Apariencia', description: 'Equipment appearance' },
+      { name: 'General / General', description: 'General equipment information' },
+      { name: 'Aftertreatment System / Sistema Postratamiento', description: 'Aftertreatment system' },
+      { name: 'Others / Otros', description: 'Other components' },
     ];
     for (const ct of componentTypes) {
       await pool.query(
