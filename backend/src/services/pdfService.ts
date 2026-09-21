@@ -27,32 +27,90 @@ export class PDFService {
     }
   }
 
-  /** Normalize component type for matching (bilingual labels). */
-  private static normalizeTypeKey(type: unknown): string {
-    return String(type || '')
+  /** Resolve component type label whether it is a string or { name }. */
+  private static getTypeLabel(type: unknown): string {
+    if (typeof type === 'string') return type;
+    if (type && typeof type === 'object' && 'name' in (type as Record<string, unknown>)) {
+      return String((type as { name: unknown }).name ?? '');
+    }
+    return String(type ?? '');
+  }
+
+  /** Full normalized label (both languages) for matching. */
+  private static normalizeTypeFull(type: unknown): string {
+    return this.getTypeLabel(type)
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .split('/')[0]
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
-  /** Job Site, Operation, Appearance, General → Información general 2 */
+  /**
+   * Job Site / Sitio de trabajo, Operation / Operación,
+   * Appearance / Apariencia, General / General → Información General 2
+   */
   private static isGeneralInfoComponent(type: unknown): boolean {
-    const key = this.normalizeTypeKey(type);
-    if (key === 'general') return true;
-    if (key.includes('job site') || key.includes('sitio de trabajo')) return true;
-    if (key === 'operation' || key.includes('operacion')) return true;
-    if (key.includes('appearance') || key.includes('apariencia')) return true;
+    const full = this.normalizeTypeFull(type);
+    if (!full) return false;
+
+    // Exact bilingual names (either language order)
+    const exactNames = [
+      'job site / sitio de trabajo',
+      'sitio de trabajo / job site',
+      'job site',
+      'sitio de trabajo',
+      'operation / operacion',
+      'operacion / operation',
+      'operation',
+      'operacion',
+      'appearance / apariencia',
+      'apariencia / appearance',
+      'appearance',
+      'apariencia',
+      'general / general',
+      'general',
+    ];
+    if (exactNames.includes(full)) return true;
+
+    // Segment match (e.g. "Job Site / Sitio de trabajo")
+    const segments = full.split('/').map((s) => s.trim()).filter(Boolean);
+    if (segments.some((s) => s === 'general')) return true;
+    if (segments.some((s) => s === 'job site' || s === 'sitio de trabajo')) return true;
+    if (segments.some((s) => s === 'operation' || s === 'operacion')) return true;
+    if (segments.some((s) => s === 'appearance' || s === 'apariencia')) return true;
+
+    // Substring fallback for slight naming variants
+    if (full.includes('job site') || full.includes('sitio de trabajo')) return true;
+    if (full.includes('appearance') || full.includes('apariencia')) return true;
+    // Operation: avoid matching unrelated types that merely contain the letters
+    if (
+      full.startsWith('operation') ||
+      full.startsWith('operacion') ||
+      full.includes('/ operation') ||
+      full.includes('/ operacion') ||
+      full.includes('operation /') ||
+      full.includes('operacion /')
+    ) {
+      return true;
+    }
+
     return false;
   }
 
   private static generalInfoOrder(type: unknown): number {
-    const key = this.normalizeTypeKey(type);
-    if (key.includes('job site') || key.includes('sitio de trabajo')) return 0;
-    if (key === 'operation' || key.includes('operacion')) return 1;
-    if (key.includes('appearance') || key.includes('apariencia')) return 2;
-    if (key === 'general') return 3;
+    const full = this.normalizeTypeFull(type);
+    if (full.includes('job site') || full.includes('sitio de trabajo')) return 0;
+    if (
+      full.startsWith('operation') ||
+      full.startsWith('operacion') ||
+      full.includes('operation') ||
+      full.includes('operacion')
+    ) {
+      return 1;
+    }
+    if (full.includes('appearance') || full.includes('apariencia')) return 2;
+    if (full === 'general' || full.startsWith('general /') || full.endsWith('/ general')) return 3;
     return 99;
   }
 
@@ -65,13 +123,17 @@ export class PDFService {
       .sort((a, b) => {
         const orderDiff = this.generalInfoOrder(a.type) - this.generalInfoOrder(b.type);
         if (orderDiff !== 0) return orderDiff;
-        return String(a.type).localeCompare(String(b.type), 'es', { sensitivity: 'base' });
+        return this.getTypeLabel(a.type).localeCompare(this.getTypeLabel(b.type), 'es', {
+          sensitivity: 'base',
+        });
       });
 
     const assessment = components
       .filter((c) => !this.isGeneralInfoComponent(c.type))
       .sort((a, b) =>
-        String(a.type).localeCompare(String(b.type), 'es', { sensitivity: 'base' })
+        this.getTypeLabel(a.type).localeCompare(this.getTypeLabel(b.type), 'es', {
+          sensitivity: 'base',
+        })
       );
 
     return { generalInfo, assessment };
@@ -114,7 +176,7 @@ export class PDFService {
 
     return `
         <div style="margin: 12px 0; padding: 8px; border: 1px solid #ddd; border-radius: 5px; page-break-inside: avoid;">
-          <h3 style="color: #2563eb; margin-bottom: 10px;">${component.type}</h3>
+          <h3 style="color: #2563eb; margin-bottom: 10px;">${this.getTypeLabel(component.type)}</h3>
           <p><strong>Hallazgos / Findings:</strong> ${this.processTextWithLineBreaks(component.findings)}</p>
           ${
             component.parameters && Array.isArray(component.parameters) && component.parameters.length > 0
@@ -178,14 +240,22 @@ export class PDFService {
         ? `
         <div class="section">
           <h2>📋 Información General 2 / General Information 2</h2>
+          <p style="color:#64748b;font-size:13px;margin:0 0 12px 0;">
+            Sitio de trabajo / Job Site · Operación / Operation · Apariencia / Appearance · General
+          </p>
           ${generalCards.join('')}
         </div>`
         : '';
 
+    // Always render assessment after Información General 2 (remaining components, A–Z)
     const assessmentHTML = `
         <div class="section">
           <h2>🔧 Evaluación de Componentes / Component Assessment</h2>
-          ${assessmentCards.length > 0 ? assessmentCards.join('') : '<p>No hay componentes evaluados / No components assessed</p>'}
+          ${
+            assessmentCards.length > 0
+              ? assessmentCards.join('')
+              : '<p>No hay componentes evaluados / No components assessed</p>'
+          }
         </div>`;
 
     return { generalInfo2HTML, assessmentHTML };
