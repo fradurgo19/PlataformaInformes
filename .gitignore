@@ -48,3 +48,6 @@ backend/uploads/
 # Temporary files
 tmp/
 temp/
+
+# Bolt / StackBlitz local config
+.bolt/
