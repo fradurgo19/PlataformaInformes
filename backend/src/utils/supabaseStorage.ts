@@ -17,10 +17,12 @@ export async function uploadFileToSupabase(fileBuffer: Buffer, fileName: string,
   const isRaster =
     uploadMime === 'image/jpeg' ||
     uploadMime === 'image/jpg' ||
+    uploadMime === 'image/pjpeg' ||
     uploadMime === 'image/png' ||
     uploadMime === 'image/webp' ||
     uploadMime === 'image/heic' ||
     uploadMime === 'image/heif' ||
+    uploadMime === 'application/octet-stream' ||
     /\.(jpe?g|png|webp|heic|heif)$/i.test(safeName);
 
   // Normalize to JPEG when sharp can decode (HEIC may fail on some hosts — then upload original)

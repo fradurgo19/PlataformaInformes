@@ -4,15 +4,17 @@ import { Request, Response, NextFunction } from 'express';
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
+  'image/pjpeg',
   'image/png',
   'image/gif',
   'image/webp',
+  'image/bmp',
   'image/svg+xml',
   'image/heic',
   'image/heif',
 ];
 
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.heic', '.heif'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.jpe', '.png', '.gif', '.webp', '.bmp', '.svg', '.heic', '.heif'];
 
 // Tamaño máximo de archivo (30MB)
 const MAX_FILE_SIZE = Number.parseInt(process.env.MAX_FILE_SIZE || '31457280', 10);
@@ -32,11 +34,13 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
         ? lowerName.substring(lowerName.lastIndexOf('.'))
         : '';
 
-      const mimeOk = ALLOWED_MIME_TYPES.includes(file.mimetype);
+      const mime = (file.mimetype || '').toLowerCase();
+      const mimeOk = ALLOWED_MIME_TYPES.includes(mime);
       const extOk = ALLOWED_EXTENSIONS.includes(fileExtension);
+      // Some phones send JPG as application/octet-stream — only allow with image extension
+      const octetStreamImage = mime === 'application/octet-stream' && extOk;
 
-      // Accept if MIME or extension is a known image (mobile browsers sometimes omit MIME)
-      if (!mimeOk && !extOk) {
+      if (!mimeOk && !extOk && !octetStreamImage) {
         return res.status(400).json({
           success: false,
           error: `File type not allowed: ${fileName}. Use JPEG, PNG, GIF or WebP.`

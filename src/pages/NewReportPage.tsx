@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateReport, useReport, useUpdateReport } from '../hooks/useReports';
@@ -38,6 +38,7 @@ export const NewReportPage: React.FC = () => {
   const { data: reportResponse, isLoading: isLoadingReport } = useReport(id || '');
 
   const [initialized, setInitialized] = useState(false);
+  const hydratedReportIdRef = useRef<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -961,91 +962,131 @@ export const NewReportPage: React.FC = () => {
     { value: 'PENDING', label: 'Pending' },
   ];
 
-  useEffect(() => {
-    if (isEditMode && reportResponse?.data && !initialized) {
-      const r = reportResponse.data;
-      setReportData({
-        clientName: r.client_name || '',
-        clientContact: '',
-        machineType: r.machine_type || '',
-        model: r.model || '',
-        serialNumber: r.serial_number || '',
-        hourmeter: r.hourmeter?.toString() || '',
-        date: r.report_date ? new Date(r.report_date).toISOString().split('T')[0] : '',
-        location: '',
-        ott: r.ott || '',
-        reasonOfService: r.reason_of_service || '',
-        conclusions: r.conclusions || '',
-        overallSuggestions: r.overall_suggestions || '',
-      });
-      
-      const loadedComponents = (r.components || []).map((comp: any) => {
-        let params: any[] = [];
-        if (Array.isArray(comp.parameters)) {
-          params = comp.parameters;
-        } else if (typeof comp.parameters === 'string') {
-          try {
-            params = JSON.parse(comp.parameters);
-            if (!Array.isArray(params)) params = [];
-          } catch {
-            params = [];
-          }
+  const hydrateFormFromReport = (r: any) => {
+    setReportData({
+      clientName: r.client_name || '',
+      clientContact: '',
+      machineType: r.machine_type || '',
+      model: r.model || '',
+      serialNumber: r.serial_number || '',
+      hourmeter: r.hourmeter?.toString() || '',
+      date: r.report_date ? new Date(r.report_date).toISOString().split('T')[0] : '',
+      location: '',
+      ott: r.ott || '',
+      reasonOfService: r.reason_of_service || '',
+      conclusions: r.conclusions || '',
+      overallSuggestions: r.overall_suggestions || '',
+    });
+
+    const loadedComponents = (r.components || []).map((comp: any) => {
+      let params: any[] = [];
+      if (Array.isArray(comp.parameters)) {
+        params = comp.parameters;
+      } else if (typeof comp.parameters === 'string') {
+        try {
+          params = JSON.parse(comp.parameters);
+          if (!Array.isArray(params)) params = [];
+        } catch {
+          params = [];
         }
-        
-        let photos: Array<{ id: string; url: string; filename: string }> = [];
-        if (Array.isArray(comp.photos)) {
-          photos = comp.photos.map((p: any) => {
+      }
+
+      let photos: Array<{ id: string; url: string; filename: string; photo_name?: string }> = [];
+      if (Array.isArray(comp.photos)) {
+        photos = comp.photos
+          .map((p: any) => {
             if (typeof p === 'string') {
-              // Si es una URL string, crear un objeto con información básica
               return {
-                id: `temp_${Date.now()}_${Math.random()}`,
+                id: `url_${p}`,
                 url: p,
-                filename: p.split('/').pop() || 'unknown.jpg'
+                filename: p.split('/').pop() || 'unknown.jpg',
               };
             }
             if (p.file_path) {
-              const url = p.file_path.startsWith('http') ? p.file_path : `http://localhost:3001${p.file_path.startsWith('/') ? '' : '/'}${p.file_path}`;
+              const url = p.file_path.startsWith('http')
+                ? p.file_path
+                : p.file_path.startsWith('/')
+                  ? p.file_path
+                  : `/${p.file_path}`;
               return {
-                id: p.id || `temp_${Date.now()}_${Math.random()}`,
-                url: url,
-                filename: p.filename || p.original_name || 'unknown.jpg'
+                id: String(p.id || `path_${p.filename || url}`),
+                url,
+                filename: p.filename || p.original_name || 'unknown.jpg',
+                photo_name: p.photo_name,
+              };
+            }
+            if (p.url) {
+              return {
+                id: String(p.id || `url_${p.url}`),
+                url: p.url,
+                filename: p.filename || 'unknown.jpg',
+                photo_name: p.photo_name,
               };
             }
             if (p.filename) {
               return {
-                id: p.id || `temp_${Date.now()}_${Math.random()}`,
-                url: `http://localhost:3001/uploads/${p.filename}`,
-                filename: p.filename
+                id: String(p.id || `file_${p.filename}`),
+                url: `/uploads/${p.filename}`,
+                filename: p.filename,
+                photo_name: p.photo_name,
               };
             }
-            return {
-              id: `temp_${Date.now()}_${Math.random()}`,
-              url: '',
-              filename: 'unknown.jpg'
-            };
-          }).filter(p => p.url !== '');
-        }
-        
-        return {
-          ...comp,
-          parameters: params,
-          photos,
-        };
-      });
-      
-      setComponents(loadedComponents);
-      setSuggestedParts(
-        Array.isArray(r.suggested_parts)
-          ? r.suggested_parts.map((p: any) => ({
-              partNumber: p.part_number,
-              description: p.description,
-              quantity: p.quantity,
-            }))
-          : []
-      );
+            return null;
+          })
+          .filter((p: { url: string } | null): p is { id: string; url: string; filename: string; photo_name?: string } =>
+            Boolean(p && p.url)
+          );
+      }
+
+      return {
+        ...comp,
+        id: comp.id,
+        type: comp.type || '',
+        findings: comp.findings || '',
+        status: comp.status || 'PENDING',
+        suggestions: comp.suggestions || '',
+        priority: comp.priority || 'MEDIUM',
+        parameters: params,
+        photos,
+      };
+    });
+
+    setComponents(loadedComponents);
+    setSuggestedParts(
+      Array.isArray(r.suggested_parts)
+        ? r.suggested_parts.map((p: any) => ({
+            partNumber: p.part_number,
+            description: p.description,
+            quantity: p.quantity,
+          }))
+        : []
+    );
+  };
+
+  const refreshFormFromServer = async (reportId: string) => {
+    const fresh = await apiService.getReport(reportId);
+    if (fresh?.success && fresh.data) {
+      hydrateFormFromReport(fresh.data);
+      hydratedReportIdRef.current = reportId;
       setInitialized(true);
+      queryClient.setQueryData(['report', reportId], fresh);
     }
-  }, [isEditMode, reportResponse, initialized]);
+  };
+
+  // Reset hydrate guard when navigating to a different report (create → edit)
+  useEffect(() => {
+    hydratedReportIdRef.current = null;
+    setInitialized(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!isEditMode || !id || !reportResponse?.data) return;
+    // Only hydrate once per report id — never overwrite in-progress edits with a stale cache
+    if (hydratedReportIdRef.current === id || initialized) return;
+    hydrateFormFromReport(reportResponse.data);
+    hydratedReportIdRef.current = id;
+    setInitialized(true);
+  }, [isEditMode, id, reportResponse, initialized]);
 
   const validateAllSteps = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -1328,14 +1369,17 @@ export const NewReportPage: React.FC = () => {
 
       if (isEditMode && id) {
         await updateReportMutation.mutateAsync({ id, updates: formData });
-        setInitialized(false);
-        await queryClient.invalidateQueries({ queryKey: ['report', id] });
         if (finalize) {
           if (draftStorageKey) localStorage.removeItem(draftStorageKey);
           navigate('/reports');
         } else {
+          // Reload fresh data from API so photos/fields stay visible without full page refresh
+          try {
+            await refreshFormFromServer(id);
+          } catch (refreshErr) {
+            console.warn('Progress saved but form refresh failed:', refreshErr);
+          }
           setSaveSuccess('Progress saved. You can keep editing or leave and come back later.');
-          persistLocalDraft();
         }
       } else {
         const created = await createReportMutation.mutateAsync(formData);
@@ -1805,12 +1849,6 @@ export const NewReportPage: React.FC = () => {
           </div>
         )}
 
-        {saveSuccess && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800 text-sm">{saveSuccess}</p>
-          </div>
-        )}
-
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -1856,7 +1894,9 @@ export const NewReportPage: React.FC = () => {
             Previous
           </Button>
 
-          <div className="flex flex-wrap gap-3 justify-end">
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap gap-3 justify-end items-start">
+            <div className="flex flex-col items-end gap-1">
             <Button
               type="button"
               variant="outline"
@@ -1871,6 +1911,12 @@ export const NewReportPage: React.FC = () => {
               )}
               Save Progress
             </Button>
+            {saveSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 max-w-xs text-right">
+                <p className="text-green-800 text-sm">{saveSuccess}</p>
+              </div>
+            )}
+            </div>
 
             {currentStep < 3 ? (
               <Button onClick={handleNext}>
@@ -1890,6 +1936,7 @@ export const NewReportPage: React.FC = () => {
                 {isEditMode ? 'Finish & Exit' : 'Save & Finish'}
               </Button>
             )}
+            </div>
           </div>
         </div>
       </div>

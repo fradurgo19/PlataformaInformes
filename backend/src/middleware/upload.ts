@@ -1,14 +1,20 @@
 import multer from 'multer';
-import path from 'path';
 import { Request } from 'express';
 
 // Configure storage (memory)
 const storage = multer.memoryStorage();
 
-// File filter
+const IMAGE_EXT = /\.(jpe?g|jpe|png|gif|webp|bmp|svg|heic|heif)$/i;
+
+// File filter — accept by MIME or extension (phones often send empty/octet-stream for JPG)
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // Allow only images
-  if (file.mimetype.startsWith('image/')) {
+  const mime = (file.mimetype || '').toLowerCase();
+  const name = file.originalname || '';
+  const mimeOk = mime.startsWith('image/');
+  const extOk = IMAGE_EXT.test(name);
+  const octetOk = mime === 'application/octet-stream' && extOk;
+
+  if (mimeOk || extOk || octetOk) {
     cb(null, true);
   } else {
     cb(new Error('Only image files are allowed'));
@@ -20,7 +26,7 @@ export const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '31457280'), // 30MB por archivo
+    fileSize: Number.parseInt(process.env.MAX_FILE_SIZE || '31457280', 10), // 30MB por archivo
     files: 100 // Max 100 archivos por request
   }
 });

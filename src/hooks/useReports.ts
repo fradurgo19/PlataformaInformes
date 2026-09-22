@@ -35,9 +35,10 @@ export const useUpdateReport = () => {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: FormData }) =>
       apiService.updateReport(id, updates),
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
-      queryClient.invalidateQueries({ queryKey: ['report', variables.id] });
+      // Intentionally skip invalidating ['report', id]: Save Progress on NewReportPage
+      // reloads via getReport + hydrate so fields/photos stay visible without a stale refetch race.
     },
   });
 };

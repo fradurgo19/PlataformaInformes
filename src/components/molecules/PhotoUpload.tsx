@@ -25,9 +25,12 @@ const isExistingPhoto = (photo: PhotoItem): photo is ExistingPhoto =>
   !isFilePhoto(photo) && typeof photo === 'object' && photo !== null && 'id' in photo;
 
 const isAcceptableImageFile = (file: File): boolean => {
-  if (file.type.startsWith('image/')) return true;
-  // Some mobile browsers send empty MIME; fall back to extension.
-  return !file.type && IMAGE_EXT.test(file.name);
+  const type = (file.type || '').toLowerCase();
+  // Accept any image/* including image/jpeg, image/jpg, image/pjpeg, etc.
+  if (type.startsWith('image/')) return true;
+  // Some devices send empty MIME or application/octet-stream for JPG/PNG
+  if (IMAGE_EXT.test(file.name)) return true;
+  return false;
 };
 
 export const PhotoUpload: React.FC<PhotoUploadProps> = ({
@@ -219,7 +222,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/jpeg,image/png,image/gif,image/webp,image/*"
+        accept="image/*,.jpg,.jpeg,.jpe,.png,.gif,.webp,.bmp,.heic,.heif,image/jpeg,image/jpg,image/pjpeg,image/png,image/gif,image/webp"
         className="hidden"
         onChange={(e) => handleFileSelect(e.target.files)}
       />

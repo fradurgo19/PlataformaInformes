@@ -330,9 +330,9 @@ export const getReportById = async (req: Request, res: Response): Promise<void> 
     
     const report = reportResult.rows[0];
     
-    // Get components
+    // Get components (stable order so photos_N indices stay aligned with UI)
     const componentsResult = await pool.query(
-      'SELECT * FROM components WHERE report_id = $1',
+      'SELECT * FROM components WHERE report_id = $1 ORDER BY created_at ASC, id ASC',
       [reportId]
     );
     
@@ -340,7 +340,7 @@ export const getReportById = async (req: Request, res: Response): Promise<void> 
     const components = await Promise.all(
       componentsResult.rows.map(async (component) => {
         const photosResult = await pool.query(
-          'SELECT * FROM photos WHERE component_id = $1',
+          'SELECT * FROM photos WHERE component_id = $1 ORDER BY created_at ASC, id ASC',
           [component.id]
         );
         // No sobrescribir file_path, devolver tal cual está en la base de datos
@@ -459,9 +459,14 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
     const feComponentIds = feComponents.map((c: any) => c.id).filter(Boolean);
 
     // Delete components that are no longer in the frontend
-    await client.query('DELETE FROM components WHERE report_id = $1 AND id NOT IN (SELECT unnest($2::uuid[]))',
-      [reportId, feComponentIds]
-    );
+    if (feComponentIds.length === 0) {
+      await client.query('DELETE FROM components WHERE report_id = $1', [reportId]);
+    } else {
+      await client.query(
+        'DELETE FROM components WHERE report_id = $1 AND NOT (id = ANY($2::uuid[]))',
+        [reportId, feComponentIds]
+      );
+    }
     
     for (const [index, componentData] of feComponents.entries()) {
       let componentId = componentData.id;
