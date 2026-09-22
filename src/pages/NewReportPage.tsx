@@ -20,10 +20,15 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { compressImageFiles } from '../utils/compressImage';
 
 const DRAFT_STORAGE_PREFIX = 'report-draft-';
 const MAX_PHOTOS_PER_COMPONENT = 20;
 const STEP_STORAGE_KEY = 'reportEditStep';
+/** Keep each multipart request under typical serverless body limits. */
+const PHOTO_UPLOAD_BATCH_SIZE = 3;
+
+type ExistingPhoto = { id: string; url: string; filename: string; photo_name?: string };
 
 export const NewReportPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +46,7 @@ export const NewReportPage: React.FC = () => {
   const hydratedReportIdRef = useRef<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   
   const [reportData, setReportData] = useState({
@@ -1063,25 +1069,96 @@ export const NewReportPage: React.FC = () => {
     );
   };
 
-  const refreshFormFromServer = async (reportId: string) => {
-    const fresh = await apiService.getReport(reportId);
-    if (fresh?.success && fresh.data) {
-      hydrateFormFromReport(fresh.data);
-      hydratedReportIdRef.current = reportId;
-      setInitialized(true);
-      queryClient.setQueryData(['report', reportId], fresh);
-    }
+  const mapServerPhotos = (rawPhotos: unknown): ExistingPhoto[] => {
+    if (!Array.isArray(rawPhotos)) return [];
+    return rawPhotos
+      .map((p: any) => {
+        if (typeof p === 'string') {
+          return {
+            id: `url_${p}`,
+            url: p,
+            filename: p.split('/').pop() || 'unknown.jpg',
+          };
+        }
+        if (p?.file_path) {
+          const url = p.file_path.startsWith('http')
+            ? p.file_path
+            : p.file_path.startsWith('/')
+              ? p.file_path
+              : `/${p.file_path}`;
+          return {
+            id: String(p.id || `path_${p.filename || url}`),
+            url,
+            filename: p.filename || p.original_name || 'unknown.jpg',
+            photo_name: p.photo_name,
+          };
+        }
+        if (p?.url) {
+          return {
+            id: String(p.id || `url_${p.url}`),
+            url: p.url,
+            filename: p.filename || 'unknown.jpg',
+            photo_name: p.photo_name,
+          };
+        }
+        return null;
+      })
+      .filter((p: ExistingPhoto | null): p is ExistingPhoto => Boolean(p?.url));
   };
 
-  // Reset hydrate guard when navigating to a different report (create → edit)
+  /** After metadata save: attach server component ids without wiping local fields/photos. */
+  const patchComponentIdsFromServer = (serverReport: any) => {
+    const serverComps = Array.isArray(serverReport?.components) ? serverReport.components : [];
+    setComponents((prev) =>
+      prev.map((local, index) => {
+        const match =
+          (local.id && serverComps.find((s: any) => s.id === local.id)) || serverComps[index];
+        if (!match?.id) return local;
+        return { ...local, id: match.id };
+      })
+    );
+  };
+
+  /**
+   * After photo uploads: replace File previews with server URLs but keep all typed fields.
+   * Never blank the form if the server payload is incomplete.
+   */
+  const syncPhotosFromServer = async (reportId: string) => {
+    const fresh = await apiService.getReport(reportId);
+    if (!fresh?.success || !fresh.data) return;
+    queryClient.setQueryData(['report', reportId], fresh);
+    const serverComps = Array.isArray(fresh.data.components) ? fresh.data.components : [];
+    setComponents((prev) =>
+      prev.map((local, index) => {
+        const match =
+          (local.id && serverComps.find((s: any) => s.id === local.id)) || serverComps[index];
+        if (!match) return local;
+        const serverPhotos = mapServerPhotos(match.photos);
+        const localExisting = local.photos.filter(
+          (p) => !(typeof File !== 'undefined' && p instanceof File)
+        ) as ExistingPhoto[];
+        return {
+          ...local,
+          id: match.id || local.id,
+          photos: serverPhotos.length > 0 ? serverPhotos : localExisting,
+        };
+      })
+    );
+    hydratedReportIdRef.current = reportId;
+    setInitialized(true);
+  };
+
+  // Reset hydrate guard only when switching to a different report id
   useEffect(() => {
-    hydratedReportIdRef.current = null;
-    setInitialized(false);
+    if (!id) return;
+    if (hydratedReportIdRef.current && hydratedReportIdRef.current !== id) {
+      hydratedReportIdRef.current = null;
+      setInitialized(false);
+    }
   }, [id]);
 
   useEffect(() => {
     if (!isEditMode || !id || !reportResponse?.data) return;
-    // Only hydrate once per report id — never overwrite in-progress edits with a stale cache
     if (hydratedReportIdRef.current === id || initialized) return;
     hydrateFormFromReport(reportResponse.data);
     hydratedReportIdRef.current = id;
@@ -1262,53 +1339,96 @@ export const NewReportPage: React.FC = () => {
     }
   };
 
-  const buildFormData = (): FormData => {
-    const reportJson = {
-      client_name: reportData.clientName,
-      machine_type: reportData.machineType,
-      model: reportData.model,
-      serial_number: reportData.serialNumber,
-      hourmeter: Number(reportData.hourmeter) || 0,
-      report_date: reportData.date,
-      ott: reportData.ott,
-      reason_of_service: reportData.reasonOfService,
-      conclusions: reportData.conclusions,
-      overall_suggestions: reportData.overallSuggestions,
-      status: isEditMode ? (reportResponse?.data?.status || 'draft') : 'draft',
-      components: components.map((c) => ({
-        id: c.id,
-        type: c.type,
-        findings: c.findings || '',
-        parameters: c.parameters,
-        status: c.status,
-        suggestions: c.suggestions,
-        priority: c.priority,
-        photos: c.photos
-          .map((p) => {
-            if (typeof File !== 'undefined' && p instanceof File) return null;
-            return typeof p === 'object' && 'url' in p ? p.url : null;
-          })
-          .filter((p) => p !== null),
-      })),
-      suggested_parts: suggestedParts.map((p) => ({
-        part_number: p.partNumber,
-        description: p.description,
-        quantity: Number(p.quantity) || 1,
-      })),
-    };
+  const buildReportPayload = (componentList = components) => ({
+    client_name: reportData.clientName,
+    machine_type: reportData.machineType,
+    model: reportData.model,
+    serial_number: reportData.serialNumber,
+    hourmeter: Number(reportData.hourmeter) || 0,
+    report_date: reportData.date,
+    ott: reportData.ott,
+    reason_of_service: reportData.reasonOfService,
+    conclusions: reportData.conclusions,
+    overall_suggestions: reportData.overallSuggestions,
+    status: isEditMode ? (reportResponse?.data?.status || 'draft') : 'draft',
+    components: componentList.map((c) => ({
+      id: c.id,
+      type: c.type,
+      findings: c.findings || '',
+      parameters: c.parameters,
+      status: c.status,
+      suggestions: c.suggestions,
+      priority: c.priority,
+      photos: c.photos
+        .map((p) => {
+          if (typeof File !== 'undefined' && p instanceof File) return null;
+          return typeof p === 'object' && 'url' in p ? p.url : null;
+        })
+        .filter((p) => p !== null),
+    })),
+    suggested_parts: suggestedParts.map((p) => ({
+      part_number: p.partNumber,
+      description: p.description,
+      quantity: Number(p.quantity) || 1,
+    })),
+  });
 
+  const buildFormData = (
+    options: {
+      componentList?: typeof components;
+      photoFilesByIndex?: Map<number, File[]>;
+    } = {}
+  ): FormData => {
+    const componentList = options.componentList || components;
     const formData = new FormData();
-    formData.append('reportData', JSON.stringify(reportJson));
+    formData.append('reportData', JSON.stringify(buildReportPayload(componentList)));
 
-    components.forEach((component, componentIndex) => {
-      component.photos.forEach((photo) => {
-        if (typeof File !== 'undefined' && photo instanceof File) {
+    if (options.photoFilesByIndex) {
+      options.photoFilesByIndex.forEach((files, componentIndex) => {
+        files.forEach((photo) => {
           formData.append(`photos_${componentIndex}`, photo, photo.name);
-        }
+        });
       });
-    });
+    }
 
     return formData;
+  };
+
+  const collectAndCompressNewPhotos = async (): Promise<Map<number, File[]>> => {
+    const byIndex = new Map<number, File[]>();
+    for (let i = 0; i < components.length; i++) {
+      const files = components[i].photos.filter(
+        (p): p is File => typeof File !== 'undefined' && p instanceof File
+      );
+      if (files.length === 0) continue;
+      const compressed = await compressImageFiles(files);
+      byIndex.set(i, compressed);
+    }
+    return byIndex;
+  };
+
+  /** Upload compressed photos in small batches to avoid serverless body/timeout limits. */
+  const uploadPhotosInBatches = async (
+    reportId: string,
+    photoFilesByIndex: Map<number, File[]>,
+    componentList: typeof components
+  ) => {
+    const queue: { componentIndex: number; file: File }[] = [];
+    photoFilesByIndex.forEach((files, componentIndex) => {
+      files.forEach((file) => queue.push({ componentIndex, file }));
+    });
+
+    for (let offset = 0; offset < queue.length; offset += PHOTO_UPLOAD_BATCH_SIZE) {
+      const slice = queue.slice(offset, offset + PHOTO_UPLOAD_BATCH_SIZE);
+      const batchMap = new Map<number, File[]>();
+      slice.forEach(({ componentIndex, file }) => {
+        const list = batchMap.get(componentIndex) || [];
+        list.push(file);
+        batchMap.set(componentIndex, list);
+      });
+      const formData = buildFormData({ componentList, photoFilesByIndex: batchMap });
+      await apiService.updateReport(reportId, formData);
+    }
   };
 
   /** Progress save: only header fields required so user can continue later. */
@@ -1364,64 +1484,139 @@ export const NewReportPage: React.FC = () => {
       return;
     }
 
+    // Snapshot local fields so a failed photo batch never blanks the form
+    const localComponentsSnapshot = components;
+    const localReportSnapshot = reportData;
+    const localPartsSnapshot = suggestedParts;
+
+    setIsSaving(true);
     try {
-      const formData = buildFormData();
+      const photoFilesByIndex = await collectAndCompressNewPhotos();
+
+      // 1) Save text/metadata first (no photo binaries) — survives even if photo upload fails
+      const metaFormData = buildFormData({ componentList: localComponentsSnapshot });
+      let reportId = id;
 
       if (isEditMode && id) {
-        await updateReportMutation.mutateAsync({ id, updates: formData });
-        if (finalize) {
-          if (draftStorageKey) localStorage.removeItem(draftStorageKey);
-          navigate('/reports');
-        } else {
-          // Reload fresh data from API so photos/fields stay visible without full page refresh
-          try {
-            await refreshFormFromServer(id);
-          } catch (refreshErr) {
-            console.warn('Progress saved but form refresh failed:', refreshErr);
-          }
-          setSaveSuccess('Progress saved. You can keep editing or leave and come back later.');
-        }
+        await updateReportMutation.mutateAsync({ id, updates: metaFormData });
+        reportId = id;
       } else {
-        const created = await createReportMutation.mutateAsync(formData);
-        const newId = created?.data?.id;
+        const created = await createReportMutation.mutateAsync(metaFormData);
+        reportId = created?.data?.id;
         if (draftStorageKey) localStorage.removeItem(draftStorageKey);
-        if (!newId) {
+        if (!reportId) {
           setErrors({ submit: 'Report saved but id was not returned. Open it from the reports list.' });
           navigate('/reports');
           return;
         }
-        if (finalize) {
-          navigate('/reports');
-        } else {
-          sessionStorage.setItem(STEP_STORAGE_KEY, String(currentStep));
-          setSaveSuccess('Progress saved. Continuing in edit mode…');
-          navigate(`/reports/${newId}/edit`, { replace: true });
+      }
+
+      // 2) Sync component ids from server (needed for stable photo attachment)
+      const afterMeta = await apiService.getReport(reportId);
+      if (afterMeta?.success && afterMeta.data) {
+        patchComponentIdsFromServer(afterMeta.data);
+        queryClient.setQueryData(['report', reportId], afterMeta);
+      }
+
+      const serverComponents = Array.isArray(afterMeta?.data?.components)
+        ? afterMeta.data.components
+        : [];
+      const componentsWithIds = localComponentsSnapshot.map((c, index) => {
+        const matched =
+          (c.id && serverComponents.find((s: { id?: string }) => s.id === c.id)) ||
+          serverComponents[index];
+        return matched?.id ? { ...c, id: matched.id } : c;
+      });
+
+      // 3) Upload photos in small batches
+      if (photoFilesByIndex.size > 0 && reportId) {
+        try {
+          await uploadPhotosInBatches(reportId, photoFilesByIndex, componentsWithIds);
+          // Prevent duplicate re-upload if sync is slow/fails
+          setComponents(
+            componentsWithIds.map((c) => ({
+              ...c,
+              photos: c.photos.filter(
+                (p) => !(typeof File !== 'undefined' && p instanceof File)
+              ),
+            }))
+          );
+        } catch (photoErr) {
+          console.error('Photo batch upload error:', photoErr);
+          setReportData(localReportSnapshot);
+          setComponents(localComponentsSnapshot);
+          setSuggestedParts(localPartsSnapshot);
+          const msg = photoErr instanceof Error ? photoErr.message : 'Photo upload failed';
+          setErrors({
+            submit: `Report text was saved, but some photos failed (${msg}). You can try Save Progress again.`,
+          });
+          if (!isEditMode && reportId) {
+            sessionStorage.setItem(STEP_STORAGE_KEY, String(currentStep));
+            navigate(`/reports/${reportId}/edit`, { replace: true });
+          }
+          return;
         }
+      }
+
+      // 4) Replace File previews with server URLs — do not wipe text fields
+      try {
+        await syncPhotosFromServer(reportId);
+      } catch (syncErr) {
+        console.warn('Saved OK but photo sync failed:', syncErr);
+        setReportData(localReportSnapshot);
+        setSuggestedParts(localPartsSnapshot);
+      }
+
+      if (finalize) {
+        if (draftStorageKey) localStorage.removeItem(draftStorageKey);
+        navigate('/reports');
+        return;
+      }
+
+      setSaveSuccess('Progress saved. You can keep editing or leave and come back later.');
+      if (!isEditMode && reportId) {
+        sessionStorage.setItem(STEP_STORAGE_KEY, String(currentStep));
+        navigate(`/reports/${reportId}/edit`, { replace: true });
       }
     } catch (error) {
       console.error('Error saving report:', error);
+      // Never clear the form on error — restore snapshot
+      setReportData(localReportSnapshot);
+      setComponents(localComponentsSnapshot);
+      setSuggestedParts(localPartsSnapshot);
 
       if (error instanceof Error) {
         if (error.message.includes('not authorized') || error.message.includes('not found')) {
           setErrors({ submit: 'You are not authorized to edit this report or the report was not found.' });
         } else if (error.message.includes('CLOSED')) {
           setErrors({ submit: 'This report is closed and cannot be edited.' });
-        } else if (error.message.includes('Request too large') || error.message.includes('413')) {
+        } else if (
+          error.message.includes('Request too large') ||
+          error.message.includes('413')
+        ) {
           setErrors({
-            submit: `The request is too large. Please reduce photos. Maximum ${MAX_PHOTOS_PER_COMPONENT} photos per component.`,
+            submit: `The request is too large. Photos are compressed automatically — try fewer photos (max ${MAX_PHOTOS_PER_COMPONENT} per component).`,
           });
         } else if (error.message.includes('Too many files')) {
           setErrors({ submit: 'Too many photos. Please reduce the number of photos.' });
         } else if (error.message.includes('File too large')) {
           setErrors({ submit: 'One or more photos are too large. Maximum size is 30MB per photo.' });
-        } else if (error.message.includes('Failed to parse response')) {
-          setErrors({ submit: 'Server error. Please try again with fewer photos or contact support.' });
+        } else if (
+          error.message.includes('Failed to parse response') ||
+          error.message.includes('Server timeout')
+        ) {
+          setErrors({
+            submit:
+              'Server could not complete the response (timeout or size limit). Your text may already be saved — refresh the page, then add remaining photos with Save Progress.',
+          });
         } else {
           setErrors({ submit: `Error saving report: ${error.message}` });
         }
       } else {
         setErrors({ submit: 'Error saving report. Please try again.' });
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1715,7 +1910,8 @@ export const NewReportPage: React.FC = () => {
                       <li>• Maximum 30MB per photo</li>
                       <li>• Maximum {MAX_PHOTOS_PER_COMPONENT} photos per component section</li>
                       <li>• Supported formats: JPEG, PNG, GIF, WebP</li>
-                      <li>• Photos will be automatically compressed and resized to 800px max</li>
+                      <li>• Photos are compressed in the browser before upload</li>
+                      <li>• Photos will be resized to ~1280px max for reliable saving</li>
                     </ul>
                   </div>
                 </div>
@@ -1901,10 +2097,10 @@ export const NewReportPage: React.FC = () => {
               type="button"
               variant="outline"
               onClick={handleSaveProgress}
-              disabled={createReportMutation.isPending || updateReportMutation.isPending}
+              disabled={isSaving || createReportMutation.isPending || updateReportMutation.isPending}
               title="Save progress and keep editing"
             >
-              {createReportMutation.isPending || updateReportMutation.isPending ? (
+              {isSaving || createReportMutation.isPending || updateReportMutation.isPending ? (
                 <LoadingSpinner />
               ) : (
                 <Save className="w-4 h-4 mr-2" />
@@ -1914,6 +2110,11 @@ export const NewReportPage: React.FC = () => {
             {saveSuccess && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 max-w-xs text-right">
                 <p className="text-green-800 text-sm">{saveSuccess}</p>
+              </div>
+            )}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-xs text-right">
+                <p className="text-red-800 text-sm">{errors.submit}</p>
               </div>
             )}
             </div>
@@ -1926,9 +2127,9 @@ export const NewReportPage: React.FC = () => {
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={createReportMutation.isPending || updateReportMutation.isPending}
+                disabled={isSaving || createReportMutation.isPending || updateReportMutation.isPending}
               >
-                {createReportMutation.isPending || updateReportMutation.isPending ? (
+                {isSaving || createReportMutation.isPending || updateReportMutation.isPending ? (
                   <LoadingSpinner />
                 ) : (
                   <Save className="w-4 h-4 mr-2" />

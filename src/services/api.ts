@@ -21,21 +21,31 @@ class ApiService {
     console.log('🔄 Processing response...');
     console.log('📊 Response status:', response.status);
     console.log('📊 Response ok:', response.ok);
-    
-    let data;
+
+    const rawText = await response.text();
+    let data: ApiResponse<T> & { error?: string };
+
     try {
-      data = await response.json();
+      data = rawText ? JSON.parse(rawText) : ({} as ApiResponse<T>);
       console.log('📊 Response data:', data);
-    } catch (error) {
-      console.error('❌ Error parsing response JSON:', error);
-      throw new Error(`Failed to parse response: ${error}`);
+    } catch {
+      console.error('❌ Error parsing response JSON. Body preview:', rawText.slice(0, 200));
+      if (response.status === 413) {
+        throw new Error('Request too large (413). Please use fewer or smaller photos.');
+      }
+      if (response.status === 502 || response.status === 504 || response.status === 408) {
+        throw new Error(
+          'Server timeout while saving. Text may have been saved — refresh or save photos in smaller batches.'
+        );
+      }
+      throw new Error(`Failed to parse response: HTTP ${response.status || 'unknown'}`);
     }
-    
+
     if (!response.ok) {
       console.error('❌ API Error:', data);
       throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
-    
+
     return data;
   }
 
