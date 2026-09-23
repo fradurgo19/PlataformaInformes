@@ -130,12 +130,15 @@ export const DashboardPage: React.FC = () => {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-red mb-1">
+              Overview
+            </p>
+            <h1 className="text-3xl font-display font-bold text-slate-900">Dashboard</h1>
             <p className="text-slate-600 mt-1">Manage your technical reports and inspections</p>
           </div>
-          <div className="mt-4 sm:mt-0">
+          <div className="mt-2 sm:mt-0">
             <Link to="/reports/new">
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -147,61 +150,61 @@ export const DashboardPage: React.FC = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-panel hover:shadow-brand transition-shadow duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Total Reports</p>
-                <p className="text-3xl font-bold text-slate-900">{priorityStats.total}</p>
+                <p className="text-3xl font-display font-bold text-slate-900">{priorityStats.total}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-brand-soft rounded-lg flex items-center justify-center ring-1 ring-brand-red/15">
+                <FileText className="w-6 h-6 text-brand-red" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-panel hover:shadow-brand transition-shadow duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">High Priority</p>
-                <p className="text-3xl font-bold text-red-600">{priorityStats.high}</p>
+                <p className="text-3xl font-display font-bold text-brand-red">{priorityStats.high}</p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-brand-soft rounded-lg flex items-center justify-center ring-1 ring-brand-red/15">
+                <AlertCircle className="w-6 h-6 text-brand-red" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-panel hover:shadow-brand transition-shadow duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Medium Priority</p>
-                <p className="text-3xl font-bold text-yellow-600">{priorityStats.medium}</p>
+                <p className="text-3xl font-display font-bold text-slate-700">{priorityStats.medium}</p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-yellow-600" />
+              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center ring-1 ring-slate-300/60">
+                <Clock className="w-6 h-6 text-slate-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-panel hover:shadow-brand transition-shadow duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">This Month</p>
-                <p className="text-3xl font-bold text-green-600">
+                <p className="text-3xl font-display font-bold text-slate-900">
                   {reports.filter(r => new Date(r.report_date).getMonth() === new Date().getMonth()).length}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center ring-1 ring-slate-300/60">
+                <Calendar className="w-6 h-6 text-slate-600" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-panel">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">Reports</h2>
+            <h2 className="text-lg font-display font-semibold text-slate-900">Reports</h2>
             <Button
               variant="outline"
               size="sm"

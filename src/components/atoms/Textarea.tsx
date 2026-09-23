@@ -14,9 +14,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label htmlFor={textareaId} className="block text-sm font-medium text-slate-700">
+          <label htmlFor={textareaId} className="form-label">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
+            {props.required && <span className="text-brand-red ml-1">*</span>}
           </label>
         )}
         <textarea
@@ -24,8 +24,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           id={textareaId}
           rows={rows}
           className={cn(
-            'block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm transition-colors resize-y',
-            'focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500',
+            'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition-colors resize-y',
+            'focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red',
             'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500',
             error && 'border-red-300 focus:border-red-500 focus:ring-red-500',
             className
@@ -33,7 +33,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="form-error">{error}</p>
         )}
         {helpText && !error && (
           <p className="text-sm text-slate-500">{helpText}</p>
