@@ -7,7 +7,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 // Import middleware
-import { generalLimiter, authLimiter, uploadLimiter } from './middleware/rateLimit';
+import { generalLimiter } from './middleware/rateLimit';
 import { sanitizeAll } from './middleware/sanitization';
 import metricsCollector from './utils/metrics';
 
@@ -113,8 +113,8 @@ app.get('/metrics', (req, res) => {
   });
 });
 
-// API routes with specific rate limiting
-app.use('/api/auth', authLimiter, authRoutes);
+// API routes — authLimiter only on login/register (see auth routes), not the whole router
+app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/machine-types', machineTypeRoutes);
 app.use('/api/component-types', componentTypeRoutes);
