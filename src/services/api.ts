@@ -598,6 +598,14 @@ class ApiService {
     });
     return this.handleResponse<User>(response);
   }
+
+  async deleteUser(id: string): Promise<ApiResponse<boolean>> {
+    const response = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<boolean>(response);
+  }
 }
 
 export const apiService = new ApiService();

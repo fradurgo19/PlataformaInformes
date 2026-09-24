@@ -354,7 +354,9 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { full_name, email, role, password, zone, brands, specialty, rating } = req.body;
+    const { full_name, email, role, zone, brands, specialty, rating } = req.body;
+    const rawPassword = typeof req.body.password === 'string' ? req.body.password : '';
+    const password = rawPassword.trim();
     const cost_mtto_250h = optionalDbNum(req.body.cost_mtto_250h);
     const cost_mtto_500h = optionalDbNum(req.body.cost_mtto_500h);
     const cost_mtto_1000h = optionalDbNum(req.body.cost_mtto_1000h);
@@ -368,7 +370,6 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const payment_method = optionalDbStr(req.body.payment_method);
     const currentUser = (req as any).user;
 
-    // Solo admins pueden editar usuarios
     if (currentUser.role !== 'admin') {
       res.status(403).json({
         success: false,
@@ -385,7 +386,6 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Validar rol
     if (!['admin', 'user', 'viewer'].includes(role)) {
       res.status(400).json({
         success: false,
@@ -394,8 +394,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Validate rating if provided
-    if (rating !== undefined && (rating < 0 || rating > 5)) {
+    if (rating !== undefined && rating !== null && (Number(rating) < 0 || Number(rating) > 5)) {
       res.status(400).json({
         success: false,
         error: 'Rating must be between 0 and 5'
@@ -403,7 +402,23 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Verificar si el email ya está en uso por otro usuario
+    if (password && password.length < 6) {
+      res.status(400).json({
+        success: false,
+        error: 'Password must be at least 6 characters'
+      });
+      return;
+    }
+
+    const existing = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
+    }
+
     const emailCheck = await pool.query(
       'SELECT id FROM users WHERE email = $1 AND id <> $2',
       [email, id]
@@ -416,9 +431,17 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    let updateQuery = '';
-    let params: any[] = [];
-    
+    // Password first — isolated so a missing optional column cannot block password reset
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      await pool.query(
+        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+        [passwordHash, id]
+      );
+    }
+
+    const brandsValue = Array.isArray(brands) ? brands : brands ? [String(brands)] : null;
+
     const returningCosts = `cost_mtto_250h, cost_mtto_500h, cost_mtto_1000h, cost_mtto_2000h,
         cost_desplazamiento_km, cost_hospedaje_dia, cost_alimentacion_dia,
         cost_hora_viaje_tecnico, cost_valor_hora_mano_obra, contact, payment_method`;
@@ -435,56 +458,46 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
       cost_valor_hora_mano_obra
     ];
 
-    if (password) {
-      const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(password, saltRounds);
-      updateQuery = `UPDATE users SET full_name = $1, email = $2, role = $3, password_hash = $4,
-        zone = $5, brands = $6, specialty = $7, rating = $8,
-        cost_mtto_250h = $9, cost_mtto_500h = $10, cost_mtto_1000h = $11, cost_mtto_2000h = $12,
-        cost_desplazamiento_km = $13, cost_hospedaje_dia = $14, cost_alimentacion_dia = $15,
-        cost_hora_viaje_tecnico = $16, cost_valor_hora_mano_obra = $17,
-        contact = $18, payment_method = $19, updated_at = NOW()
-        WHERE id = $20 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating,
-        ${returningCosts}, created_at, updated_at`;
-      params = [
-        full_name,
-        email,
-        role,
-        passwordHash,
-        zone,
-        brands,
-        specialty,
-        rating,
-        ...costParams,
-        contact,
-        payment_method,
-        id
-      ];
-    } else {
-      updateQuery = `UPDATE users SET full_name = $1, email = $2, role = $3,
-        zone = $4, brands = $5, specialty = $6, rating = $7,
-        cost_mtto_250h = $8, cost_mtto_500h = $9, cost_mtto_1000h = $10, cost_mtto_2000h = $11,
-        cost_desplazamiento_km = $12, cost_hospedaje_dia = $13, cost_alimentacion_dia = $14,
-        cost_hora_viaje_tecnico = $15, cost_valor_hora_mano_obra = $16,
-        contact = $17, payment_method = $18, updated_at = NOW()
-        WHERE id = $19 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating,
-        ${returningCosts}, created_at, updated_at`;
-      params = [
-        full_name,
-        email,
-        role,
-        zone,
-        brands,
-        specialty,
-        rating,
-        ...costParams,
-        contact,
-        payment_method,
-        id
-      ];
+    let result;
+    try {
+      result = await pool.query(
+        `UPDATE users SET full_name = $1, email = $2, role = $3,
+          zone = $4, brands = $5, specialty = $6, rating = $7,
+          cost_mtto_250h = $8, cost_mtto_500h = $9, cost_mtto_1000h = $10, cost_mtto_2000h = $11,
+          cost_desplazamiento_km = $12, cost_hospedaje_dia = $13, cost_alimentacion_dia = $14,
+          cost_hora_viaje_tecnico = $15, cost_valor_hora_mano_obra = $16,
+          contact = $17, payment_method = $18, updated_at = NOW()
+          WHERE id = $19 RETURNING id, username, email, full_name, role, zone, brands, specialty, rating,
+          ${returningCosts}, created_at, updated_at`,
+        [
+          full_name,
+          email,
+          role,
+          zone ?? null,
+          brandsValue,
+          specialty ?? null,
+          rating ?? null,
+          ...costParams,
+          contact,
+          payment_method,
+          id
+        ]
+      );
+    } catch (columnErr: any) {
+      // Fallback if optional cost/contact columns are not migrated yet
+      const msg = String(columnErr?.message || '');
+      if (!msg.includes('column') && columnErr?.code !== '42703') {
+        throw columnErr;
+      }
+      result = await pool.query(
+        `UPDATE users SET full_name = $1, email = $2, role = $3,
+          zone = $4, brands = $5, specialty = $6, rating = $7, updated_at = NOW()
+          WHERE id = $8
+          RETURNING id, username, email, full_name, role, zone, brands, specialty, rating, created_at, updated_at`,
+        [full_name, email, role, zone ?? null, brandsValue, specialty ?? null, rating ?? null, id]
+      );
     }
 
-    const result = await pool.query(updateQuery, params);
     if (result.rows.length === 0) {
       res.status(404).json({
         success: false,
@@ -496,11 +509,18 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const response: ApiResponse<User> = {
       success: true,
       data: result.rows[0],
-      message: 'User updated successfully'
+      message: password ? 'User updated and password changed successfully' : 'User updated successfully'
     };
     res.json(response);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update user error:', error);
+    if (error?.code === '23505') {
+      res.status(400).json({
+        success: false,
+        error: 'Email or username already exists'
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -509,11 +529,11 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 };
 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
     const currentUser = (req as any).user;
 
-    // Solo admins pueden eliminar usuarios
     if (currentUser.role !== 'admin') {
       res.status(403).json({
         success: false,
@@ -522,8 +542,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // No permitir eliminar el propio usuario
-    if (currentUser.id === id) {
+    if (String(currentUser.id) === String(id)) {
       res.status(400).json({
         success: false,
         error: 'Cannot delete your own account'
@@ -531,9 +550,8 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Verificar si el usuario existe
-    const userCheck = await pool.query(
-      'SELECT id FROM users WHERE id = $1',
+    const userCheck = await client.query(
+      'SELECT id, username FROM users WHERE id = $1',
       [id]
     );
     if (userCheck.rows.length === 0) {
@@ -544,20 +562,39 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Eliminar usuario
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    await client.query('BEGIN');
+
+    // Remove owned reports first when FK is not CASCADE (Neon may vary)
+    await client.query('DELETE FROM reports WHERE user_id = $1', [id]);
+    await client.query('DELETE FROM users WHERE id = $1', [id]);
+
+    await client.query('COMMIT');
 
     const response: ApiResponse<boolean> = {
       success: true,
       data: true,
-      message: 'User deleted successfully'
+      message: `User ${userCheck.rows[0].username} deleted successfully`
     };
     res.json(response);
-  } catch (error) {
+  } catch (error: any) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      /* ignore */
+    }
     console.error('Delete user error:', error);
+    if (error?.code === '23503') {
+      res.status(400).json({
+        success: false,
+        error: 'Cannot delete user: related records still exist. Contact support.'
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
+  } finally {
+    client.release();
   }
 }; 

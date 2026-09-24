@@ -1,29 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
 
-// Función para sanitizar strings
+/** Never mutate credentials — patterns like on\w+= corrupt real passwords. */
+const PASS_THROUGH_KEYS = new Set([
+  'password',
+  'password_hash',
+  'token',
+  'newPassword',
+  'confirmPassword',
+  'currentPassword',
+]);
+
 const sanitizeString = (str: string): string => {
   if (typeof str !== 'string') return '';
-  
+
   return str
     .trim()
-    .replace(/[<>]/g, '') // Remover < y >
-    .replace(/javascript:/gi, '') // Remover javascript:
-    .replace(/on\w+=/gi, '') // Remover event handlers
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remover scripts
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, ''); // Remover iframes
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
 };
 
-// Función para sanitizar objetos
 const sanitizeObject = (obj: any): any => {
   if (typeof obj !== 'object' || obj === null) return obj;
-  
+
   if (Array.isArray(obj)) {
     return obj.map(sanitizeObject);
   }
-  
+
   const sanitized: any = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === 'string') {
+    if (PASS_THROUGH_KEYS.has(key) && typeof value === 'string') {
+      sanitized[key] = value;
+    } else if (typeof value === 'string') {
       sanitized[key] = sanitizeString(value);
     } else if (typeof value === 'object' && value !== null) {
       sanitized[key] = sanitizeObject(value);
@@ -34,7 +44,6 @@ const sanitizeObject = (obj: any): any => {
   return sanitized;
 };
 
-// Middleware para sanitizar datos del body
 export const sanitizeBody = (req: Request, res: Response, next: NextFunction) => {
   if (req.body && typeof req.body === 'object') {
     req.body = sanitizeObject(req.body);
@@ -42,7 +51,6 @@ export const sanitizeBody = (req: Request, res: Response, next: NextFunction) =>
   next();
 };
 
-// Middleware para sanitizar parámetros de query
 export const sanitizeQuery = (req: Request, res: Response, next: NextFunction) => {
   if (req.query && typeof req.query === 'object') {
     req.query = sanitizeObject(req.query);
@@ -50,7 +58,6 @@ export const sanitizeQuery = (req: Request, res: Response, next: NextFunction) =
   next();
 };
 
-// Middleware para sanitizar parámetros de URL
 export const sanitizeParams = (req: Request, res: Response, next: NextFunction) => {
   if (req.params && typeof req.params === 'object') {
     req.params = sanitizeObject(req.params);
@@ -58,11 +65,10 @@ export const sanitizeParams = (req: Request, res: Response, next: NextFunction) 
   next();
 };
 
-// Middleware completo para sanitizar todos los datos
 export const sanitizeAll = (req: Request, res: Response, next: NextFunction) => {
   sanitizeBody(req, res, () => {
     sanitizeQuery(req, res, () => {
       sanitizeParams(req, res, next);
     });
   });
-}; 
+};

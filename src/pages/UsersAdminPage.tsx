@@ -173,7 +173,7 @@ export const UsersAdminPage: React.FC = () => {
         full_name: form.full_name,
         role: form.role,
         zone: form.zone || undefined,
-        brands: form.brands.length > 0 ? form.brands : undefined,
+        brands: Array.isArray(form.brands) && form.brands.length > 0 ? form.brands : undefined,
         specialty: form.specialty || undefined,
         rating: form.rating,
         ...USER_COST_FIELDS.reduce(
@@ -209,16 +209,21 @@ export const UsersAdminPage: React.FC = () => {
     setError(null);
     setSuccess(null);
     
-    // Validaciones
     if (!form.full_name || !form.email || !form.role) {
       setError('Full name, email and role are required');
       setLoading(false);
       return;
     }
 
-    // Validar rating si se proporciona
     if (form.rating !== undefined && (form.rating < 0 || form.rating > 5)) {
       setError('Rating must be between 0 and 5');
+      setLoading(false);
+      return;
+    }
+
+    const newPassword = typeof form.password === 'string' ? form.password.trim() : '';
+    if (newPassword && newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
       setLoading(false);
       return;
     }
@@ -226,6 +231,7 @@ export const UsersAdminPage: React.FC = () => {
     try {
       if (!editId) {
         setError('No user selected for editing');
+        setLoading(false);
         return;
       }
 
@@ -234,10 +240,10 @@ export const UsersAdminPage: React.FC = () => {
         email: form.email,
         role: form.role,
         zone: form.zone || undefined,
-        brands: form.brands.length > 0 ? form.brands : undefined,
+        brands: Array.isArray(form.brands) && form.brands.length > 0 ? form.brands : undefined,
         specialty: form.specialty || undefined,
         rating: form.rating,
-        password: form.password || undefined,
+        password: newPassword || undefined,
         ...USER_COST_FIELDS.reduce(
           (acc, { key }) => {
             const v = form[key];
@@ -251,7 +257,7 @@ export const UsersAdminPage: React.FC = () => {
       });
       
       if (res.success) {
-        setSuccess('User updated successfully');
+        setSuccess(newPassword ? 'User updated and password changed' : 'User updated successfully');
         fetchUsers();
         setTimeout(() => {
           handleCloseModal();
@@ -261,6 +267,31 @@ export const UsersAdminPage: React.FC = () => {
       }
     } catch (e: any) {
       setError(e.message || 'Error updating user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (user: User) => {
+    const confirmed = window.confirm(
+      `Delete user "${user.username}" (${user.full_name})?\n\nTheir reports will also be removed. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await apiService.deleteUser(user.id);
+      if (res.success) {
+        setSuccess(res.message || 'User deleted successfully');
+        if (editId === user.id) handleCloseModal();
+        await fetchUsers();
+      } else {
+        setError(res.error || 'Error deleting user');
+      }
+    } catch (e: any) {
+      setError(e.message || 'Error deleting user');
     } finally {
       setLoading(false);
     }
@@ -284,6 +315,16 @@ export const UsersAdminPage: React.FC = () => {
           <h1 className="text-2xl font-bold">User Administration</h1>
                       <Button onClick={handleOpenCreate}>Create User</Button>
         </div>
+        {error && !showCreate && !showEdit && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-800 text-sm">
+            {error}
+          </div>
+        )}
+        {success && !showCreate && !showEdit && (
+          <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-green-800 text-sm">
+            {success}
+          </div>
+        )}
         <div className="mb-4 flex gap-2">
           <Input
                             placeholder="Search by name, username, email, zone, specialty or brands"
@@ -341,9 +382,20 @@ export const UsersAdminPage: React.FC = () => {
                     </td>
                   ))}
                   <td className="px-2 py-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(user)}>
-                      Edit
-                    </Button>
+                    <div className="flex flex-wrap gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(user)} disabled={loading}>
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-brand-red hover:text-brand-red hover:bg-brand-soft"
+                        onClick={() => handleDelete(user)}
+                        disabled={loading}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -404,7 +456,7 @@ export const UsersAdminPage: React.FC = () => {
               <Input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Full name" required />
               <Input name="username" value={form.username} onChange={handleChange} placeholder="Username" required disabled />
               <Input name="email" value={form.email} onChange={handleChange} placeholder="Email" type="email" required />
-              <Input name="password" value={form.password} onChange={handleChange} placeholder="New password (optional)" type="password" />
+              <Input name="password" value={form.password} onChange={handleChange} placeholder="New password (optional, min 6 chars)" type="password" autoComplete="new-password" />
               <Select name="role" value={form.role} onChange={handleChange} options={roleOptions} required />
               <Input name="zone" value={form.zone} onChange={handleChange} placeholder="Zone (e.g., Bogotá, Medellín)" />
               <Input name="brands" value={form.brands.join(', ')} onChange={handleChange} placeholder="Brands (comma separated, e.g., CAT, Komatsu)" />
