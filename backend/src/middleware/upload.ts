@@ -5,11 +5,28 @@ import { Request } from 'express';
 const storage = multer.memoryStorage();
 
 const IMAGE_EXT = /\.(jpe?g|jpe|png|gif|webp|bmp|svg|heic|heif)$/i;
+const VIDEO_EXT = /\.(mp4|webm|mov|m4v)$/i;
 
-// File filter — accept by MIME or extension (phones often send empty/octet-stream for JPG)
+const isVideoUpload = (file: Express.Multer.File): boolean =>
+  (file.fieldname || '').startsWith('videos_');
+
+// File filter — images on photos_* ; videos on videos_* (PDF photo flow stays image-only)
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const mime = (file.mimetype || '').toLowerCase();
   const name = file.originalname || '';
+
+  if (isVideoUpload(file)) {
+    const videoMime = mime.startsWith('video/');
+    const videoExt = VIDEO_EXT.test(name);
+    const octetVideo = (mime === 'application/octet-stream' || mime === '') && videoExt;
+    if (videoMime || videoExt || octetVideo) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error('Only video files are allowed'));
+    return;
+  }
+
   const mimeOk = mime.startsWith('image/');
   const extOk = IMAGE_EXT.test(name);
   const octetOk = mime === 'application/octet-stream' && extOk;
@@ -54,10 +71,10 @@ export const handleUploadError = (error: Error, req: Request, res: any, next: an
     }
   }
   
-  if (error.message === 'Only image files are allowed') {
+  if (error.message === 'Only image files are allowed' || error.message === 'Only video files are allowed') {
     return res.status(400).json({
       success: false,
-      error: 'Only image files are allowed'
+      error: error.message
     });
   }
   

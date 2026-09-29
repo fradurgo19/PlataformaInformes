@@ -5,6 +5,45 @@ import { PDFService } from '../services/pdfService';
 import { EmailService } from '../services/emailService';
 import { uploadFileToSupabase } from '../utils/supabaseStorage';
 
+const insertComponentVideos = async (
+  db: { query: (text: string, params?: unknown[]) => Promise<unknown> },
+  reportId: string,
+  componentId: string,
+  files: Express.Multer.File[],
+  index: number
+): Promise<void> => {
+  const newVideos = files.filter((file) => file.fieldname === `videos_${index}`);
+  for (const video of newVideos) {
+    const uniqueFileName = `video_${reportId}_${componentId}_${Date.now()}_${video.originalname}`;
+    const { publicUrl, size, mimetype, storedFileName } = await uploadFileToSupabase(
+      video.buffer,
+      uniqueFileName,
+      video.mimetype || 'video/mp4'
+    );
+    try {
+      await db.query(
+        `INSERT INTO videos (component_id, filename, original_name, file_path, file_size, mime_type, video_name)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          componentId,
+          storedFileName || uniqueFileName,
+          video.originalname,
+          publicUrl,
+          size,
+          mimetype,
+          video.originalname,
+        ]
+      );
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if (code === '42P01') {
+        throw new Error('Videos table is missing. Run add-videos-table.sql on the database.');
+      }
+      throw err;
+    }
+  }
+};
+
 export const createReport = async (req: Request, res: Response) => {
   const client = await pool.connect();
   
@@ -109,6 +148,7 @@ export const createReport = async (req: Request, res: Response) => {
             );
           }
         }
+        await insertComponentVideos(client, report.id, componentId, files, index);
       }
     }
     
@@ -345,10 +385,22 @@ export const getReportById = async (req: Request, res: Response): Promise<void> 
         );
         // No sobrescribir file_path, devolver tal cual está en la base de datos
         const photos = photosResult.rows;
+        let videos: unknown[] = [];
+        try {
+          const videosResult = await pool.query(
+            'SELECT * FROM videos WHERE component_id = $1 ORDER BY created_at ASC, id ASC',
+            [component.id]
+          );
+          videos = videosResult.rows;
+        } catch (videoErr: unknown) {
+          const code = (videoErr as { code?: string })?.code;
+          if (code !== '42P01') throw videoErr;
+        }
         return {
           ...component,
           parameters: component.parameters ? JSON.parse(component.parameters) : [],
-          photos
+          photos,
+          videos
         };
       })
     );
@@ -523,6 +575,7 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
           ]
         );
       }
+      await insertComponentVideos(client, reportId, componentId, files, index);
     }
 
     // --- Suggested Parts Synchronization (simple delete and recreate) ---
@@ -551,6 +604,8 @@ export const updateReport = async (req: Request, res: Response): Promise<void> =
     if (error instanceof Error) {
       if (error.message.includes('not found') || error.message.includes('not authorized')) {
         res.status(404).json({ success: false, error: error.message });
+      } else if (error.message.includes('add-videos-table')) {
+        res.status(500).json({ success: false, error: error.message });
       } else {
         res.status(500).json({ success: false, error: 'Internal server error' });
       }
@@ -610,6 +665,16 @@ export const deleteReport = async (req: Request, res: Response): Promise<void> =
         [componentIds]
       );
       photosToDelete = photosResult.rows;
+      try {
+        const videosResult = await client.query(
+          'SELECT file_path FROM videos WHERE component_id = ANY($1)',
+          [componentIds]
+        );
+        photosToDelete = photosToDelete.concat(videosResult.rows);
+      } catch (videoErr: unknown) {
+        const code = (videoErr as { code?: string })?.code;
+        if (code !== '42P01') throw videoErr;
+      }
     }
     
     // Delete photos from Supabase Storage

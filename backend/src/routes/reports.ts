@@ -130,4 +130,50 @@ router.delete('/photos/:photoId', authenticateToken as any, async (req, res) => 
   }
 });
 
+router.delete('/videos/:videoId', authenticateToken as any, async (req, res) => {
+  try {
+    const videoId = req.params.videoId;
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+
+    const videoResult = await pool.query(
+      `SELECT v.*, c.report_id, r.user_id, r.general_status
+       FROM videos v
+       JOIN components c ON v.component_id = c.id
+       JOIN reports r ON c.report_id = r.id
+       WHERE v.id = $1`,
+      [videoId]
+    );
+
+    if (videoResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Video not found' });
+    }
+
+    const video = videoResult.rows[0];
+    const isOwner = userId === video.user_id;
+    const isAdmin = userRole === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to delete this video' });
+    }
+    if (video.general_status === 'CLOSED') {
+      return res.status(403).json({ success: false, error: 'Report is CLOSED and cannot be edited' });
+    }
+
+    if (video.file_path && video.file_path.startsWith('http')) {
+      try {
+        const { deleteFilesFromSupabase } = await import('../utils/supabaseStorage');
+        await deleteFilesFromSupabase(video.file_path);
+      } catch (error) {
+        console.error('Error deleting video from Supabase:', error);
+      }
+    }
+
+    await pool.query('DELETE FROM videos WHERE id = $1', [videoId]);
+    return res.json({ success: true, message: 'Video deleted successfully' });
+  } catch (error) {
+    console.error('Delete video error:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
 export default router; 

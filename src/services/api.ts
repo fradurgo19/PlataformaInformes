@@ -560,6 +560,15 @@ class ApiService {
     return this.handleResponse<boolean>(response);
   }
 
+  async deleteVideo(videoId: string): Promise<ApiResponse<boolean>> {
+    const response = await fetch(`${API_BASE_URL}/reports/videos/${videoId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<boolean>(response);
+  }
+
   async updatePhotoName(photoId: string, photoName: string): Promise<ApiResponse<{ id: string; photo_name: string }>> {
     const response = await fetch(`${API_BASE_URL}/photos/${photoId}/name`, {
       method: 'PUT',

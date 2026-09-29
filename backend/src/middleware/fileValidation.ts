@@ -16,6 +16,15 @@ const ALLOWED_MIME_TYPES = [
 
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.jpe', '.png', '.gif', '.webp', '.bmp', '.svg', '.heic', '.heif'];
 
+const VIDEO_MIME_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-m4v',
+];
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.m4v'];
+const MAX_VIDEO_SIZE = Number.parseInt(process.env.MAX_VIDEO_SIZE || '20971520', 10);
+
 // Tamaño máximo de archivo (30MB)
 const MAX_FILE_SIZE = Number.parseInt(process.env.MAX_FILE_SIZE || '31457280', 10);
 
@@ -35,6 +44,25 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
         : '';
 
       const mime = (file.mimetype || '').toLowerCase();
+      const isVideoField = (file.fieldname || '').startsWith('videos_');
+
+      if (isVideoField) {
+        const videoMimeOk = VIDEO_MIME_TYPES.includes(mime) || mime.startsWith('video/');
+        const videoExtOk = VIDEO_EXTENSIONS.includes(fileExtension);
+        const octetVideo = (mime === 'application/octet-stream' || mime === '') && videoExtOk;
+        if (!videoMimeOk && !videoExtOk && !octetVideo) {
+          return res.status(400).json({
+            success: false,
+            error: `Video type not allowed: ${fileName}. Use MP4, WebM or MOV.`
+          });
+        }
+        if (file.size > MAX_VIDEO_SIZE) {
+          return res.status(400).json({
+            success: false,
+            error: `Video too large: ${fileName}. Maximum size: ${MAX_VIDEO_SIZE / 1024 / 1024}MB`
+          });
+        }
+      } else {
       const mimeOk = ALLOWED_MIME_TYPES.includes(mime);
       const extOk = ALLOWED_EXTENSIONS.includes(fileExtension);
       // Some phones send JPG as application/octet-stream — only allow with image extension
@@ -52,6 +80,7 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
           success: false,
           error: `File too large: ${fileName}. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`
         });
+      }
       }
 
       // Path traversal only (spaces and unicode names are OK)

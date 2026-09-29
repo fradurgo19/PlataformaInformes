@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Textarea } from '../atoms/Textarea';
@@ -122,6 +123,12 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
             </>
           )}
         </Button>
+
+        <Link to={`/reports/${reportId}/media`}>
+          <Button type="button" variant="outline">
+            Informe con videos
+          </Button>
+        </Link>
 
         <Button
           onClick={() => setShowEmailForm(!showEmailForm)}

@@ -147,6 +147,9 @@ export class PDFService {
     const componentPhotos = photos.filter((photo) => photo.component_id === component.id);
 
     const photosHTMLPromises = componentPhotos.map(async (photo) => {
+      if ((photo.mime_type || '').toLowerCase().startsWith('video/')) {
+        return '';
+      }
       let imageBase64 = '';
       const mimeType = photo.mime_type || 'image/jpeg';
 

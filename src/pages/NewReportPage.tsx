@@ -10,6 +10,7 @@ import { Input } from '../components/atoms/Input';
 import { Select } from '../components/atoms/Select';
 import { Textarea } from '../components/atoms/Textarea';
 import { PhotoUpload } from '../components/molecules/PhotoUpload';
+import { VideoUpload } from '../components/molecules/VideoUpload';
 import { LoadingSpinner } from '../components/molecules/LoadingSpinner';
 import { 
   Save, 
@@ -21,9 +22,11 @@ import {
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { compressImageFiles } from '../utils/compressImage';
+import { compressVideoFiles } from '../utils/compressVideo';
 
 const DRAFT_STORAGE_PREFIX = 'report-draft-';
 const MAX_PHOTOS_PER_COMPONENT = 20;
+const MAX_VIDEOS_PER_COMPONENT = 2;
 const STEP_STORAGE_KEY = 'reportEditStep';
 /** Keep each multipart request under typical serverless body limits. */
 const PHOTO_UPLOAD_BATCH_SIZE = 3;
@@ -72,6 +75,7 @@ export const NewReportPage: React.FC = () => {
     status: 'CORRECTED' | 'PENDING';
     suggestions?: string;
     photos: Array<File | { id: string; url: string; filename: string }>;
+    videos: Array<File | { id: string; url: string; filename: string }>;
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
   }>>([]);
 
@@ -147,6 +151,7 @@ export const NewReportPage: React.FC = () => {
           ...c,
           // Files cannot be restored from localStorage; keep count for user notice
           photos: c.photos.filter((p) => !(typeof File !== 'undefined' && p instanceof File)),
+          videos: (c.videos || []).filter((p) => !(typeof File !== 'undefined' && p instanceof File)),
           pendingNewPhotos: c.photos.filter((p) => typeof File !== 'undefined' && p instanceof File).length,
         })),
         suggestedParts,
@@ -968,6 +973,33 @@ export const NewReportPage: React.FC = () => {
     { value: 'PENDING', label: 'Pending' },
   ];
 
+  const mapStoredMedia = (raw: unknown, kind: 'photo' | 'video') => {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((p: any) => {
+        if (!p) return null;
+        if (typeof p === 'string') {
+          return { id: `url_${p}`, url: p, filename: p.split('/').pop() || (kind === 'video' ? 'video.mp4' : 'photo.jpg') };
+        }
+        const rawUrl = p.file_path || p.url;
+        if (!rawUrl && p.filename) {
+          return {
+            id: String(p.id || p.filename),
+            url: `/uploads/${p.filename}`,
+            filename: p.filename,
+          };
+        }
+        if (!rawUrl) return null;
+        const url = rawUrl.startsWith('http') || rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+        return {
+          id: String(p.id || url),
+          url,
+          filename: p.filename || p.original_name || (kind === 'video' ? 'video.mp4' : 'photo.jpg'),
+        };
+      })
+      .filter((p): p is { id: string; url: string; filename: string } => Boolean(p && p.url));
+  };
+
   const hydrateFormFromReport = (r: any) => {
     setReportData({
       clientName: r.client_name || '',
@@ -1054,6 +1086,7 @@ export const NewReportPage: React.FC = () => {
         priority: comp.priority || 'MEDIUM',
         parameters: params,
         photos,
+        videos: mapStoredMedia(comp.videos, 'video'),
       };
     });
 
@@ -1134,13 +1167,18 @@ export const NewReportPage: React.FC = () => {
           (local.id && serverComps.find((s: any) => s.id === local.id)) || serverComps[index];
         if (!match) return local;
         const serverPhotos = mapServerPhotos(match.photos);
+        const serverVideos = mapServerPhotos(match.videos);
         const localExisting = local.photos.filter(
+          (p) => !(typeof File !== 'undefined' && p instanceof File)
+        ) as ExistingPhoto[];
+        const localVideos = (local.videos || []).filter(
           (p) => !(typeof File !== 'undefined' && p instanceof File)
         ) as ExistingPhoto[];
         return {
           ...local,
           id: match.id || local.id,
           photos: serverPhotos.length > 0 ? serverPhotos : localExisting,
+          videos: serverVideos.length > 0 ? serverVideos : localVideos,
         };
       })
     );
@@ -1265,6 +1303,7 @@ export const NewReportPage: React.FC = () => {
       status: 'PENDING',
       suggestions: '',
       photos: [],
+      videos: [],
       priority: 'MEDIUM',
     }]);
   };
@@ -1330,6 +1369,15 @@ export const NewReportPage: React.FC = () => {
     }
   };
 
+  const deleteExistingVideo = async (videoId: string) => {
+    try {
+      await apiService.deleteVideo(videoId);
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      throw error;
+    }
+  };
+
   const updatePhotoName = async (photoId: string, newName: string) => {
     try {
       await apiService.updatePhotoName(photoId, newName);
@@ -1377,6 +1425,7 @@ export const NewReportPage: React.FC = () => {
     options: {
       componentList?: typeof components;
       photoFilesByIndex?: Map<number, File[]>;
+      videoFilesByIndex?: Map<number, File[]>;
     } = {}
   ): FormData => {
     const componentList = options.componentList || components;
@@ -1387,6 +1436,14 @@ export const NewReportPage: React.FC = () => {
       options.photoFilesByIndex.forEach((files, componentIndex) => {
         files.forEach((photo) => {
           formData.append(`photos_${componentIndex}`, photo, photo.name);
+        });
+      });
+    }
+
+    if (options.videoFilesByIndex) {
+      options.videoFilesByIndex.forEach((files, componentIndex) => {
+        files.forEach((video) => {
+          formData.append(`videos_${componentIndex}`, video, video.name);
         });
       });
     }
@@ -1405,6 +1462,37 @@ export const NewReportPage: React.FC = () => {
       byIndex.set(i, compressed);
     }
     return byIndex;
+  };
+
+  const collectAndCompressNewVideos = async (): Promise<Map<number, File[]>> => {
+    const byIndex = new Map<number, File[]>();
+    for (let i = 0; i < components.length; i++) {
+      const files = (components[i].videos || []).filter(
+        (p): p is File => typeof File !== 'undefined' && p instanceof File
+      );
+      if (files.length === 0) continue;
+      const compressed = await compressVideoFiles(files);
+      byIndex.set(i, compressed);
+    }
+    return byIndex;
+  };
+
+  const uploadVideosInBatches = async (
+    reportId: string,
+    videoFilesByIndex: Map<number, File[]>,
+    componentList: typeof components
+  ) => {
+    const queue: { componentIndex: number; file: File }[] = [];
+    videoFilesByIndex.forEach((files, componentIndex) => {
+      files.forEach((file) => queue.push({ componentIndex, file }));
+    });
+
+    for (const item of queue) {
+      const batchMap = new Map<number, File[]>();
+      batchMap.set(item.componentIndex, [item.file]);
+      const formData = buildFormData({ componentList, videoFilesByIndex: batchMap });
+      await apiService.updateReport(reportId, formData);
+    }
   };
 
   /** Upload compressed photos in small batches to avoid serverless body/timeout limits. */
@@ -1549,6 +1637,34 @@ export const NewReportPage: React.FC = () => {
           const msg = photoErr instanceof Error ? photoErr.message : 'Photo upload failed';
           setErrors({
             submit: `Report text was saved, but some photos failed (${msg}). You can try Save Progress again.`,
+          });
+          if (!isEditMode && reportId) {
+            sessionStorage.setItem(STEP_STORAGE_KEY, String(currentStep));
+            navigate(`/reports/${reportId}/edit`, { replace: true });
+          }
+          return;
+        }
+      }
+
+      const videoFilesByIndex = await collectAndCompressNewVideos();
+      if (videoFilesByIndex.size > 0 && reportId) {
+        try {
+          await uploadVideosInBatches(reportId, videoFilesByIndex, componentsWithIds);
+          setComponents(
+            componentsWithIds.map((c) => ({
+              ...c,
+              photos: c.photos.filter((p) => !(typeof File !== 'undefined' && p instanceof File)),
+              videos: (c.videos || []).filter((p) => !(typeof File !== 'undefined' && p instanceof File)),
+            }))
+          );
+        } catch (videoErr) {
+          console.error('Video batch upload error:', videoErr);
+          setReportData(localReportSnapshot);
+          setComponents(localComponentsSnapshot);
+          setSuggestedParts(localPartsSnapshot);
+          const msg = videoErr instanceof Error ? videoErr.message : 'Video upload failed';
+          setErrors({
+            submit: `Report text was saved, but a video failed (${msg}). You can try Save Progress again.`,
           });
           if (!isEditMode && reportId) {
             sessionStorage.setItem(STEP_STORAGE_KEY, String(currentStep));
@@ -1924,6 +2040,13 @@ export const NewReportPage: React.FC = () => {
                 onDeleteExistingPhoto={deleteExistingPhoto}
                 onPhotoNameChange={updatePhotoName}
                 maxPhotos={MAX_PHOTOS_PER_COMPONENT}
+              />
+
+              <VideoUpload
+                videos={component.videos || []}
+                onVideosChange={(videos) => updateComponent(index, 'videos', videos)}
+                onDeleteExistingVideo={deleteExistingVideo}
+                maxVideos={MAX_VIDEOS_PER_COMPONENT}
               />
             </div>
           </div>

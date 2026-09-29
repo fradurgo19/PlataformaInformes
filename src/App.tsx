@@ -16,6 +16,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { NewReportPage } from './pages/NewReportPage';
 import { ReportViewPage } from './pages/ReportViewPage';
+import { MediaReportPage } from './pages/MediaReportPage';
 import ProfilePage from './pages/ProfilePage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPage from './pages/AdminPage';
@@ -75,6 +76,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <NewReportPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/:id/media"
+        element={
+          <ProtectedRoute>
+            <MediaReportPage />
           </ProtectedRoute>
         }
       />

@@ -83,6 +83,7 @@ export interface Component {
   created_at: string;
   updated_at: string;
   photos?: Photo[];
+  videos?: Photo[];
 }
 
 export interface SuggestedPart {
