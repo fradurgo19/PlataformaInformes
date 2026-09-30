@@ -5,6 +5,43 @@ import { PDFService } from '../services/pdfService';
 import { EmailService } from '../services/emailService';
 import { uploadFileToSupabase } from '../utils/supabaseStorage';
 
+const MAX_VIDEOS_PER_COMPONENT = 10;
+
+const storeVideoFile = async (
+  db: { query: (text: string, params?: unknown[]) => Promise<unknown> },
+  reportId: string,
+  componentId: string,
+  video: Express.Multer.File
+): Promise<void> => {
+  const uniqueFileName = `video_${reportId}_${componentId}_${Date.now()}_${video.originalname}`;
+  const { publicUrl, size, mimetype, storedFileName } = await uploadFileToSupabase(
+    video.buffer,
+    uniqueFileName,
+    video.mimetype || 'video/mp4'
+  );
+  try {
+    await db.query(
+      `INSERT INTO videos (component_id, filename, original_name, file_path, file_size, mime_type, video_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        componentId,
+        storedFileName || uniqueFileName,
+        video.originalname,
+        publicUrl,
+        size,
+        mimetype,
+        video.originalname,
+      ]
+    );
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    if (code === '42P01') {
+      throw new Error('Videos table is missing. Run add-videos-table.sql on the database.');
+    }
+    throw err;
+  }
+};
+
 const insertComponentVideos = async (
   db: { query: (text: string, params?: unknown[]) => Promise<unknown> },
   reportId: string,
@@ -14,33 +51,7 @@ const insertComponentVideos = async (
 ): Promise<void> => {
   const newVideos = files.filter((file) => file.fieldname === `videos_${index}`);
   for (const video of newVideos) {
-    const uniqueFileName = `video_${reportId}_${componentId}_${Date.now()}_${video.originalname}`;
-    const { publicUrl, size, mimetype, storedFileName } = await uploadFileToSupabase(
-      video.buffer,
-      uniqueFileName,
-      video.mimetype || 'video/mp4'
-    );
-    try {
-      await db.query(
-        `INSERT INTO videos (component_id, filename, original_name, file_path, file_size, mime_type, video_name)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          componentId,
-          storedFileName || uniqueFileName,
-          video.originalname,
-          publicUrl,
-          size,
-          mimetype,
-          video.originalname,
-        ]
-      );
-    } catch (err: unknown) {
-      const code = (err as { code?: string })?.code;
-      if (code === '42P01') {
-        throw new Error('Videos table is missing. Run add-videos-table.sql on the database.');
-      }
-      throw err;
-    }
+    await storeVideoFile(db, reportId, componentId, video);
   }
 };
 
@@ -182,6 +193,73 @@ export const createReport = async (req: Request, res: Response) => {
     });
   } finally {
     client.release();
+  }
+};
+
+/** Insert one clip without rewriting the whole report. Used so several videos can save faster. */
+export const addComponentVideo = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const reportId = req.params.id;
+    const componentId = typeof req.body.componentId === 'string' ? req.body.componentId.trim() : '';
+    const file = req.file;
+    const currentUser = (req as any).user;
+
+    if (!componentId || !file) {
+      res.status(400).json({ success: false, error: 'Component and video file are required' });
+      return;
+    }
+
+    const reportResult = await pool.query(
+      'SELECT user_id, general_status FROM reports WHERE id = $1',
+      [reportId]
+    );
+    if (reportResult.rows.length === 0) {
+      res.status(404).json({ success: false, error: 'Report not found' });
+      return;
+    }
+    const report = reportResult.rows[0];
+    const isOwner = currentUser.id === report.user_id;
+    const isAdmin = currentUser.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      res.status(403).json({ success: false, error: 'You are not authorized to edit this report' });
+      return;
+    }
+    if (report.general_status === 'CLOSED') {
+      res.status(403).json({ success: false, error: 'Report is CLOSED and cannot be edited' });
+      return;
+    }
+
+    const componentResult = await pool.query(
+      'SELECT id FROM components WHERE id = $1 AND report_id = $2',
+      [componentId, reportId]
+    );
+    if (componentResult.rows.length === 0) {
+      res.status(404).json({ success: false, error: 'Component not found' });
+      return;
+    }
+
+    const countResult = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM videos WHERE component_id = $1',
+      [componentId]
+    );
+    if (countResult.rows[0].total >= MAX_VIDEOS_PER_COMPONENT) {
+      res.status(400).json({
+        success: false,
+        error: `Maximum of ${MAX_VIDEOS_PER_COMPONENT} videos per component`,
+      });
+      return;
+    }
+
+    await storeVideoFile(pool, reportId, componentId, file);
+    res.json({ success: true, message: 'Video saved' });
+  } catch (error) {
+    console.error('Add component video error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    if (message.includes('add-videos-table')) {
+      res.status(500).json({ success: false, error: message });
+      return;
+    }
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };
 

@@ -560,6 +560,22 @@ class ApiService {
     return this.handleResponse<boolean>(response);
   }
 
+  async uploadComponentVideo(reportId: string, componentId: string, file: File): Promise<ApiResponse<boolean>> {
+    const formData = new FormData();
+    formData.append('componentId', componentId);
+    formData.append('video', file, file.name);
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/reports/${reportId}/videos`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return this.handleResponse<boolean>(response);
+  }
+
   async deleteVideo(videoId: string): Promise<ApiResponse<boolean>> {
     const response = await fetch(`${API_BASE_URL}/reports/videos/${videoId}`, {
       method: 'DELETE',

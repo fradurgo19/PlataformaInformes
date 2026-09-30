@@ -8,7 +8,8 @@ import {
   downloadPDF,
   sendReportEmail,
   testEmailService,
-  closeReport
+  closeReport,
+  addComponentVideo
 } from '../controllers/reportController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { upload, handleUploadError } from '../middleware/upload';
@@ -25,6 +26,7 @@ router.post('/', upload.any(), handleUploadError, validateFileUpload, createRepo
 router.get('/', getReports as any);
 router.get('/:id', getReportById as any);
 router.put('/:id', upload.any(), handleUploadError, validateFileUpload, updateReport as any);
+router.post('/:id/videos', upload.single('video'), handleUploadError, validateFileUpload, addComponentVideo as any);
 router.delete('/:id', requireRole(['admin']), deleteReport as any);
 
 // PDF and Email routes

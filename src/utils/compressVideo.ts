@@ -2,7 +2,6 @@
 const MAX_EDGE = 800;
 const TARGET_BPS = 700_000;
 const MAX_DURATION_SEC = 60;
-const SKIP_IF_UNDER_BYTES = 1_200_000;
 
 const isVideoFile = (file: File): boolean => {
   const type = (file.type || '').toLowerCase();
@@ -37,9 +36,6 @@ const captureFromVideo = (video: HTMLVideoElement): MediaStream | null => {
  */
 export async function compressVideoFile(file: File): Promise<File> {
   if (!isVideoFile(file)) return file;
-  if (file.size > 0 && file.size <= SKIP_IF_UNDER_BYTES && /video\/(mp4|webm)/i.test(file.type)) {
-    return file;
-  }
 
   const recorderMime = pickRecorderMime();
   if (!recorderMime) {
@@ -66,6 +62,14 @@ export async function compressVideoFile(file: File): Promise<File> {
     }
     if (duration > MAX_DURATION_SEC) {
       throw new Error(`Video is too long. Maximum is ${MAX_DURATION_SEC} seconds per clip.`);
+    }
+
+    // Phone clips already fit the upload limit. Re-encoding plays the full clip in real time.
+    const FAST_UPLOAD_MAX_BYTES = 3_800_000;
+    const type = (file.type || '').toLowerCase();
+    const alreadyPlayable = type.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+    if (alreadyPlayable && file.size > 0 && file.size <= FAST_UPLOAD_MAX_BYTES) {
+      return file;
     }
 
     const scale = Math.min(1, MAX_EDGE / Math.max(video.videoWidth || MAX_EDGE, video.videoHeight || MAX_EDGE));

@@ -1487,12 +1487,24 @@ export const NewReportPage: React.FC = () => {
       files.forEach((file) => queue.push({ componentIndex, file }));
     });
 
-    for (const item of queue) {
-      const batchMap = new Map<number, File[]>();
-      batchMap.set(item.componentIndex, [item.file]);
-      const formData = buildFormData({ componentList, videoFilesByIndex: batchMap });
-      await apiService.updateReport(reportId, formData);
-    }
+    const pending = [...queue];
+    const concurrency = 2;
+    const workers = Array.from({ length: Math.min(concurrency, pending.length) }, async () => {
+      while (pending.length > 0) {
+        const item = pending.shift();
+        if (!item) return;
+        const componentId = componentList[item.componentIndex]?.id;
+        if (!componentId) {
+          const batchMap = new Map<number, File[]>();
+          batchMap.set(item.componentIndex, [item.file]);
+          const formData = buildFormData({ componentList, videoFilesByIndex: batchMap });
+          await apiService.updateReport(reportId, formData);
+          continue;
+        }
+        await apiService.uploadComponentVideo(reportId, componentId, item.file);
+      }
+    });
+    await Promise.all(workers);
   };
 
   /** Upload compressed photos in small batches to avoid serverless body/timeout limits. */

@@ -96,7 +96,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
       <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
         <Video className="mx-auto h-7 w-7 text-slate-400 mb-2" />
         <p className="text-sm text-slate-600 mb-2">
-          MP4, WebM or MOV. Max 60 seconds. Compressed before upload.
+          MP4, WebM or MOV. Max 60 seconds, 10 per component. Short clips upload directly.
         </p>
         <Button
           type="button"

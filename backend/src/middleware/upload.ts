@@ -7,8 +7,10 @@ const storage = multer.memoryStorage();
 const IMAGE_EXT = /\.(jpe?g|jpe|png|gif|webp|bmp|svg|heic|heif)$/i;
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v)$/i;
 
-const isVideoUpload = (file: Express.Multer.File): boolean =>
-  (file.fieldname || '').startsWith('videos_');
+const isVideoUpload = (file: Express.Multer.File): boolean => {
+  const field = file.fieldname || '';
+  return field === 'video' || field.startsWith('videos_');
+};
 
 // File filter — images on photos_* ; videos on videos_* (PDF photo flow stays image-only)
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {

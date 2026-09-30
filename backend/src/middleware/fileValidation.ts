@@ -30,11 +30,14 @@ const MAX_FILE_SIZE = Number.parseInt(process.env.MAX_FILE_SIZE || '31457280', 1
 
 export const validateFileUpload = (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+    const uploaded = req.file
+      ? [req.file]
+      : (Array.isArray(req.files) ? req.files as Express.Multer.File[] : []);
+    if (uploaded.length === 0) {
       return next();
     }
 
-    const files = req.files as Express.Multer.File[];
+    const files = uploaded;
 
     for (const file of files) {
       const fileName = file.originalname || 'unnamed';
@@ -44,7 +47,8 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
         : '';
 
       const mime = (file.mimetype || '').toLowerCase();
-      const isVideoField = (file.fieldname || '').startsWith('videos_');
+      const fieldName = file.fieldname || '';
+      const isVideoField = fieldName === 'video' || fieldName.startsWith('videos_');
 
       if (isVideoField) {
         const videoMimeOk = VIDEO_MIME_TYPES.includes(mime) || mime.startsWith('video/');
