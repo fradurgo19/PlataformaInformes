@@ -26,7 +26,7 @@ import { compressVideoFiles } from '../utils/compressVideo';
 
 const DRAFT_STORAGE_PREFIX = 'report-draft-';
 const MAX_PHOTOS_PER_COMPONENT = 20;
-const MAX_VIDEOS_PER_COMPONENT = 2;
+const MAX_VIDEOS_PER_COMPONENT = 10;
 const STEP_STORAGE_KEY = 'reportEditStep';
 /** Keep each multipart request under typical serverless body limits. */
 const PHOTO_UPLOAD_BATCH_SIZE = 3;

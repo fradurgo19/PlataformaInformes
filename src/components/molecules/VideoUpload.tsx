@@ -30,7 +30,7 @@ const isAcceptableVideo = (file: File): boolean => {
 export const VideoUpload: React.FC<VideoUploadProps> = ({
   videos,
   onVideosChange,
-  maxVideos = 2,
+  maxVideos = 10,
   onDeleteExistingVideo,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
