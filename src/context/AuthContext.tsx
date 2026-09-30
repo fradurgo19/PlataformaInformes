@@ -13,6 +13,7 @@ type AuthAction =
   | { type: 'LOGIN_SUCCESS'; payload: User }
   | { type: 'LOGIN_FAILURE' }
   | { type: 'LOGOUT' }
+  | { type: 'AUTH_READY' }
   | { type: 'UPDATE_USER'; payload: User };
 
 interface AuthContextType {
@@ -33,7 +34,7 @@ interface AuthContextType {
 
 const initialState: AuthState = {
   user: null,
-  isLoading: false,
+  isLoading: true,
   isAuthenticated: false,
 };
 
@@ -51,7 +52,9 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
     case 'LOGIN_FAILURE':
       return { ...state, isLoading: false, isAuthenticated: false, user: null };
     case 'LOGOUT':
-      return { ...state, user: null, isAuthenticated: false };
+      return { ...state, user: null, isAuthenticated: false, isLoading: false };
+    case 'AUTH_READY':
+      return { ...state, isLoading: false };
     case 'UPDATE_USER':
       return { ...state, user: action.payload };
     default:
@@ -86,11 +89,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const user = JSON.parse(userData);
         apiService.setToken(token);
         dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+        return;
       } catch (error) {
         console.error('Error parsing stored user data:', error);
         apiService.clearToken();
       }
     }
+    dispatch({ type: 'AUTH_READY' });
   }, []);
 
   const login = async (username: string, password: string): Promise<void> => {

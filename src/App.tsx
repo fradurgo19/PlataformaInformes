@@ -4,7 +4,7 @@
 //
 //
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ReportProvider } from './context/ReportContext';
@@ -23,6 +23,7 @@ import AdminPage from './pages/AdminPage';
 import { UsersAdminPage } from './pages/UsersAdminPage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { ParametersPage } from './pages/ParametersPage';
+import { LoadingSpinner } from './components/molecules/LoadingSpinner';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -36,23 +37,44 @@ const queryClient = new QueryClient({
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { state } = useAuth();
-  
-  if (!state.isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  const location = useLocation();
+
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   }
-  
+
+  if (!state.isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
   return <>{children}</>;
 };
 
 const AppRoutes: React.FC = () => {
   const { state } = useAuth();
+  const location = useLocation();
+  const returnTo = (location.state as { from?: string } | null)?.from;
+
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <Routes>
       <Route
         path="/login"
         element={
-          state.isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+          state.isAuthenticated
+            ? <Navigate to={returnTo && returnTo !== '/login' ? returnTo : '/dashboard'} replace />
+            : <LoginPage />
         }
       />
       <Route
