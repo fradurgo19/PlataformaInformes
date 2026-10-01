@@ -103,7 +103,7 @@ export const ParametersPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full py-2">
         <h1 className="text-3xl font-bold text-slate-900 mb-4">Parameters</h1>
         <p className="text-slate-600 mb-8">Access technical parameters by model. Admins can add new parameters.</p>
 

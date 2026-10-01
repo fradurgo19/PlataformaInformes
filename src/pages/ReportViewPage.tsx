@@ -199,7 +199,7 @@ export const ReportViewPage: React.FC = () => {
   return (
     <LocalErrorBoundary>
       <DashboardLayout>
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="w-full space-y-8">
           {/* Notification */}
           {notification && (
             <div className={`p-4 rounded-lg ${
