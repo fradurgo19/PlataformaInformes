@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useReport } from '../hooks/useReports';
 import { LoadingSpinner } from '../components/molecules/LoadingSpinner';
@@ -27,7 +27,7 @@ const toMediaUrl = (item: unknown): MediaItem | null => {
   const url = raw.startsWith('http') || raw.startsWith('/') ? raw : `/${raw}`;
   return {
     url,
-    name: record.video_name || record.photo_name || record.original_name || record.filename || 'media',
+    name: record.photo_name || record.video_name || record.original_name || record.filename || 'media',
   };
 };
 
@@ -41,6 +41,7 @@ export const MediaReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading, error } = useReport(id || '');
   const report = data?.data;
+  const [viewer, setViewer] = useState<{ kind: 'photo' | 'video'; url: string; name: string } | null>(null);
 
   const documentModel = useMemo<MediaReportFile | null>(() => {
     if (!report) return null;
@@ -98,8 +99,8 @@ export const MediaReportPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-brand-mute py-6 px-4">
-      <div className="max-w-4xl mx-auto bg-white shadow-panel border border-slate-200 rounded-xl overflow-hidden">
+    <div className="min-h-screen bg-brand-mute py-4 px-4">
+      <div className="w-full bg-white shadow-panel border border-slate-200 rounded-xl overflow-hidden">
         <div className="h-1.5 bg-brand-red" />
         <div className="p-6 md:p-8 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -128,7 +129,7 @@ export const MediaReportPage: React.FC = () => {
           </div>
 
           <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-            El archivo HTML se abre en el navegador y reproduce los videos. Quien lo reciba necesita internet porque los videos están en el almacenamiento del informe.
+            Haga clic en una foto para ampliarla o en un video para verlo a media pantalla, sin salir del informe.
           </p>
 
           {documentModel.reasonOfService && (
@@ -149,30 +150,39 @@ export const MediaReportPage: React.FC = () => {
                 </p>
               )}
               {section.photos.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {section.photos.map((photo) => (
-                    <img
-                      key={photo.url}
-                      src={photo.url}
-                      alt={photo.name}
-                      className="w-full h-32 object-cover rounded border border-slate-200"
-                    />
-                  ))}
+                <div>
+                  <p className="text-sm font-medium text-slate-800 mb-2">Fotos / Photos</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3">
+                    {section.photos.map((photo) => (
+                      <button
+                        key={`${section.title}-${photo.url}`}
+                        type="button"
+                        className="text-left border border-slate-200 rounded-lg overflow-hidden bg-white cursor-zoom-in"
+                        onClick={() => setViewer({ kind: 'photo', url: photo.url, name: photo.name })}
+                      >
+                        <img src={photo.url} alt={photo.name} className="w-full h-32 object-cover" />
+                        <span className="block text-xs text-slate-600 px-2 py-1 break-words">{photo.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {section.videos.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-slate-800">Videos</p>
-                  {section.videos.map((video) => (
-                    <video
-                      key={video.url}
-                      src={video.url}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      className="w-full max-h-80 rounded border border-slate-200 bg-black"
-                    />
-                  ))}
+                <div>
+                  <p className="text-sm font-medium text-slate-800 mb-2">Videos</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {section.videos.map((video) => (
+                      <button
+                        key={`${section.title}-${video.url}`}
+                        type="button"
+                        className="text-left border border-slate-200 rounded-lg overflow-hidden bg-white"
+                        onClick={() => setViewer({ kind: 'video', url: video.url, name: video.name })}
+                      >
+                        <video src={video.url} muted playsInline preload="metadata" className="w-full h-40 object-cover bg-black pointer-events-none" />
+                        <span className="block text-xs text-slate-600 px-2 py-1 break-words">{video.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </section>
@@ -192,6 +202,22 @@ export const MediaReportPage: React.FC = () => {
           )}
         </div>
       </div>
+      {viewer && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center p-4"
+          onClick={() => setViewer(null)}
+        >
+          <div className="flex flex-col items-center gap-3 max-w-full" onClick={(event) => event.stopPropagation()}>
+            <Button type="button" onClick={() => setViewer(null)}>Cerrar</Button>
+            {viewer.kind === 'photo' ? (
+              <img src={viewer.url} alt={viewer.name} className="max-w-[92vw] max-h-[84vh] object-contain bg-white rounded-lg" />
+            ) : (
+              <video src={viewer.url} controls autoPlay playsInline className="w-[50vw] h-[50vh] max-w-full bg-black rounded-lg" />
+            )}
+            <p className="text-sm text-white text-center">{viewer.name}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
