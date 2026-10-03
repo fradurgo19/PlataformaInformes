@@ -1,25 +1,45 @@
 import { Pool, PoolConfig } from 'pg';
 import dotenv from 'dotenv';
-import path from 'path';
 
 dotenv.config();
 
-const dbConfig: PoolConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'machinery_reports',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'your_password',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-  // Forzar SSL en producción (Neon, Vercel, etc.)
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-};
+/**
+ * Prefer DATABASE_URL (Supabase / Neon connection string).
+ * Fallback to discrete DB_* vars for local development.
+ */
+function buildPoolConfig(): PoolConfig {
+  const connectionString = process.env.DATABASE_URL?.trim();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const ssl =
+    isProduction || process.env.DB_SSL === 'true'
+      ? { rejectUnauthorized: false }
+      : undefined;
 
-const pool = new Pool(dbConfig);
+  if (connectionString) {
+    return {
+      connectionString,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      ssl,
+    };
+  }
 
-// Test the connection
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    database: process.env.DB_NAME || 'machinery_reports',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'your_password',
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: isProduction ? 10000 : 2000,
+    ssl,
+  };
+}
+
+const pool = new Pool(buildPoolConfig());
+
 pool.on('connect', () => {
   console.log('Connected to PostgreSQL database');
 });
@@ -29,4 +49,4 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
-export default pool; 
+export default pool;
